@@ -112,15 +112,24 @@ analyzers:
 ## CLI
 
 ```
-archguardian init       Create .archguard.yml + install git hook
-archguardian check      Analyze staged changes (pre-commit mode)
-archguardian scan       Analyze full project
-archguardian learn      Infer conventions from codebase (v0.2.0)
+archguardian init                  Create .archguard.yml + install git hook
+archguardian check [--format]      Analyze staged changes (pre-commit mode)
+archguardian scan  [--format]      Analyze full project
+archguardian learn [--apply]       Infer conventions from codebase
+archguardian rules [--json]        List all 18 built-in rules
+archguardian metrics [--json]      Show findings trend over time
 ```
 
-Exit codes: `0` pass, `1` errors, `2` warnings exceeded, `3` config error, `5` timeout.
+Formats: `terminal` (default), `json`, `sarif` &mdash; Exit codes: `0` pass, `1` errors, `2` warnings exceeded, `3` config error, `5` timeout.
 
-## How it works
+## Architecture
+
+<p align="center">
+  <img src="https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/ysfAskri/archguardian/master/docs/architecture.puml" alt="C4 Architecture Diagram" width="900">
+</p>
+
+<details>
+<summary>How the pipeline works</summary>
 
 ```
 git commit
@@ -141,15 +150,20 @@ git commit
                                commit OK             commit blocked
 ```
 
+</details>
+
 Only **changed lines** are checked in pre-commit mode — no noise from existing code.
+
+> [View the PlantUML C4 source](docs/architecture.puml)
 
 ## Roadmap
 
-| Version | What's coming |
-|:--------|:--------------|
-| **v0.2.0** | Duplicate detection, layer violation checks, Python support, `archguardian learn`, JSON output |
-| **v0.3.0** | Plugin system, LLM-powered suggestions, SARIF output, GitHub Action |
-| **v1.0.0** | VS Code extension, auto-fix, Go/Rust/Java support |
+| Version | Status | What's included |
+|:--------|:-------|:----------------|
+| **v0.1.0** | Shipped | Security scanner, AI smell detector, convention enforcer, CLI, git hooks |
+| **v0.2.0** | Shipped | Duplicate detection, layer violations, Python support, `learn`, `rules`, JSON output, metrics |
+| **v0.3.0** | Shipped | Plugin system, SARIF output, GitHub Action, CI pipeline |
+| **v1.0.0** | Next | VS Code extension, auto-fix, LLM suggestions, Go/Rust/Java support, dashboard |
 
 ## Contributing
 
@@ -165,10 +179,12 @@ npm run build      # builds to dist/
 
 ```
 src/
-├── cli/          Commander.js entry + init, check, scan commands
+├── cli/          Commander.js entry + 6 commands + output formatters
 ├── core/         Pipeline, config loader, diff parser, types
-├── parsers/      Tree-sitter WASM manager + AST utilities
-├── analyzers/    Security scanner, AI smell detector, convention enforcer
+├── parsers/      Tree-sitter WASM manager (TS/JS/Python) + AST utilities
+├── analyzers/    Security, AI smells, conventions, duplicates, layer violations
+├── plugins/      Dynamic plugin loader for external analyzers
+├── metrics/      Run history tracker (.archguard/metrics.json)
 ├── hooks/        Git hook installer (direct + Husky)
 └── utils/        Git operations, logging, perf timing
 ```

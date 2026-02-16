@@ -1,0 +1,65 @@
+@startuml archguardian-c4
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+LAYOUT_LEFT_RIGHT()
+
+title Architecture Guardian — C4 Container Diagram
+
+Person(dev, "Developer", "Writes code using AI tools\n(Cursor, Copilot, Claude Code)")
+
+System_Boundary(archguard, "archguardian") {
+
+    Container(cli, "CLI", "TypeScript / Commander.js", "Entry point: init, check,\nscan, learn, rules, metrics")
+
+    Container(pipeline, "Analysis Pipeline", "TypeScript", "Orchestrates parallel execution\nwith 5s timeout per analyzer")
+
+    Container(diffparser, "Diff Parser", "TypeScript", "Converts git diff output\ninto structured FileInfo[]")
+
+    Container(treesitter, "AST Parser", "tree-sitter WASM", "Zero-native-dep parsing\nTS/JS/TSX/JSX/Python")
+
+    Container(security, "Security Scanner", "Analyzer", "Secrets, SQL injection,\nXSS, eval, ReDoS")
+
+    Container(aismells, "AI Smell Detector", "Analyzer", "Comments ratio, unused imports,\nverbose errors, copy-paste")
+
+    Container(conventions, "Convention Enforcer", "Analyzer", "Naming: camelCase, PascalCase,\nUPPER_SNAKE, kebab-case")
+
+    Container(duplicates, "Duplicate Detector", "Analyzer", "AST structural hashing +\nJaccard token similarity")
+
+    Container(layers, "Layer Violation Detector", "Analyzer", "Architecture boundary\nimport rules")
+
+    Container(plugins, "Plugin Loader", "TypeScript", "Dynamic import() for\nexternal analyzer packages")
+
+    Container(reporter, "Reporter", "TypeScript", "Terminal, JSON,\nSARIF v2.1.0 output")
+
+    Container(metrics, "Metrics Tracker", "TypeScript", "Records findings over time\nin .archguard/metrics.json")
+
+    ContainerDb(config, ".archguard.yml", "YAML + Zod", "Project config:\nrules, severity, layers")
+}
+
+System_Ext(git, "Git", "Version control\npre-commit hook")
+System_Ext(github, "GitHub Actions", "CI/CD pipeline\nSARIF upload")
+System_Ext(npm, "npm Registry", "Plugin distribution")
+
+Rel(dev, git, "git commit")
+Rel(git, cli, "pre-commit hook\ntriggers check")
+Rel(dev, cli, "archguardian scan / learn / rules")
+
+Rel(cli, config, "Loads config")
+Rel(cli, diffparser, "Parses staged diff")
+Rel(diffparser, pipeline, "FileInfo[]")
+Rel(pipeline, treesitter, "Parse files to AST")
+
+Rel(pipeline, security, "Runs in parallel")
+Rel(pipeline, aismells, "Runs in parallel")
+Rel(pipeline, conventions, "Runs in parallel")
+Rel(pipeline, duplicates, "Runs in parallel")
+Rel(pipeline, layers, "Runs in parallel")
+Rel(pipeline, plugins, "Loads external analyzers")
+Rel(plugins, npm, "Dynamic import()")
+
+Rel(pipeline, reporter, "AnalysisSummary")
+Rel(pipeline, metrics, "Records run data")
+Rel(reporter, github, "SARIF output")
+
+@enduml
