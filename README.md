@@ -10,11 +10,12 @@
 
 ---
 
-**archguardian** is a pre-commit hook and CLI that catches security issues, AI-generated code smells, and naming convention violations in TypeScript and JavaScript — before they reach your repo.
+**archguardian** is a pre-commit hook and CLI that catches security issues, AI-generated code smells, naming convention violations, code duplication, and architecture layer breaches — before they reach your repo. Works with TypeScript, JavaScript, Python, Go, Rust, and Java.
 
 ```bash
 npx archguardian init    # adds config + git hook
 npx archguardian scan    # scans full project
+npx archguardian fix     # auto-fix simple findings
 git commit               # hook runs automatically
 ```
 
@@ -76,7 +77,37 @@ archguardian runs in <1 second on typical diffs. It uses [tree-sitter](https://t
 
 </td>
 </tr>
+<tr>
+<td valign="top" width="33%">
+
+**Duplicates**
+- AST structural hashing (ignores identifiers/literals)
+- Jaccard token similarity (configurable threshold)
+- Fingerprint cache for incremental scans
+
+</td>
+<td valign="top" width="33%">
+
+**Architecture**
+- Define layers (UI, Service, Repository, Domain)
+- Enforce allowed/denied import directions
+- Catch boundary violations at commit time
+
+</td>
+<td valign="top" width="33%">
+
+**Auto-fix**
+- Remove unused imports automatically
+- Rename identifiers to match conventions
+- `--dry-run` to preview changes first
+
+</td>
+</tr>
 </table>
+
+## Languages
+
+TypeScript, JavaScript, TSX, JSX, Python, Go, Rust, Java — powered by [tree-sitter](https://tree-sitter.github.io/) WASM grammars.
 
 ## Configuration
 
@@ -84,7 +115,7 @@ archguardian runs in <1 second on typical diffs. It uses [tree-sitter](https://t
 
 ```yaml
 version: 1
-languages: [typescript, javascript, tsx, jsx]
+languages: [typescript, javascript, tsx, jsx, python, go, rust, java]
 include: ["src/**"]
 exclude: ["**/*.test.ts", "**/node_modules/**"]
 
@@ -107,6 +138,25 @@ analyzers:
       classes: PascalCase
       constants: UPPER_SNAKE
       files: kebab-case
+  duplicates:
+    enabled: true
+    similarity: 0.85
+  architecture:
+    layers:
+      - name: ui
+        patterns: ["src/components/**", "src/pages/**"]
+      - name: service
+        patterns: ["src/services/**"]
+      - name: repository
+        patterns: ["src/repositories/**"]
+    rules:
+      - from: ui
+        deny: [repository]
+
+llm:
+  enabled: false
+  provider: openai     # openai | anthropic | gemini
+  model: gpt-4o-mini
 ```
 
 ## CLI
@@ -115,12 +165,45 @@ analyzers:
 archguardian init                  Create .archguard.yml + install git hook
 archguardian check [--format]      Analyze staged changes (pre-commit mode)
 archguardian scan  [--format]      Analyze full project
+archguardian fix   [--dry-run]     Auto-fix simple findings
 archguardian learn [--apply]       Infer conventions from codebase
 archguardian rules [--json]        List all 18 built-in rules
 archguardian metrics [--json]      Show findings trend over time
+archguardian dashboard [--port]    Open web dashboard on localhost
 ```
 
 Formats: `terminal` (default), `json`, `sarif` &mdash; Exit codes: `0` pass, `1` errors, `2` warnings exceeded, `3` config error, `5` timeout.
+
+## LLM suggestions
+
+Enable optional AI-powered fix suggestions. Supports OpenAI, Anthropic, and Gemini:
+
+```yaml
+llm:
+  enabled: true
+  provider: anthropic   # openai | anthropic | gemini
+```
+
+Set your API key via environment variable (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY`) or in config. Suggestions are cached locally to avoid repeated calls.
+
+## GitHub Action
+
+```yaml
+- uses: ysfAskri/archguardian@v1
+  with:
+    format: sarif        # uploads to GitHub Security tab
+```
+
+## Plugins
+
+Create custom analyzers as npm packages:
+
+```yaml
+plugins:
+  - archguardian-plugin-my-rules
+```
+
+Each plugin exports an analyzer class that extends the base analyzer interface. See [plugin docs](docs/) for details.
 
 ## How it works
 
@@ -137,14 +220,14 @@ Only **changed lines** are checked in pre-commit mode — no noise from existing
 | **v0.1.0** | Shipped | Security scanner, AI smell detector, convention enforcer, CLI, git hooks |
 | **v0.2.0** | Shipped | Duplicate detection, layer violations, Python support, `learn`, `rules`, JSON output, metrics |
 | **v0.3.0** | Shipped | Plugin system, SARIF output, GitHub Action, CI pipeline |
-| **v1.0.0** | Next | VS Code extension, auto-fix, LLM suggestions, Go/Rust/Java support, dashboard |
+| **v1.0.0** | Shipped | VS Code extension, auto-fix, LLM suggestions, Go/Rust/Java support, dashboard |
 
 ## Contributing
 
 ```bash
 git clone https://github.com/ysfAskri/archguardian.git
-cd archguard && npm install
-npm test           # 72 tests
+cd archguardian && npm install
+npm test           # 121 tests
 npm run build      # builds to dist/
 ```
 
@@ -153,11 +236,13 @@ npm run build      # builds to dist/
 
 ```
 src/
-├── cli/          Commander.js entry + 6 commands + output formatters
+├── cli/          Commander.js entry + 10 commands + output formatters (terminal, JSON, SARIF)
 ├── core/         Pipeline, config loader, diff parser, types
-├── parsers/      Tree-sitter WASM manager (TS/JS/Python) + AST utilities
+├── parsers/      Tree-sitter WASM manager (TS/JS/Python/Go/Rust/Java) + AST utilities
 ├── analyzers/    Security, AI smells, conventions, duplicates, layer violations
 ├── plugins/      Dynamic plugin loader for external analyzers
+├── llm/          LLM client (OpenAI, Anthropic, Gemini), prompt builder, file-based cache
+├── fixes/        Auto-fix engine (remove unused imports, rename conventions)
 ├── metrics/      Run history tracker (.archguard/metrics.json)
 ├── hooks/        Git hook installer (direct + Husky)
 └── utils/        Git operations, logging, perf timing
