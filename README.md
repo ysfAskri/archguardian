@@ -24,7 +24,7 @@
 
 <br>
 
-[![npm version](https://img.shields.io/npm/v/archguard?style=for-the-badge&logo=npm&logoColor=white&color=CB3837)](https://www.npmjs.com/package/archguard)
+[![version](https://img.shields.io/badge/version-0.1.0-CB3837?style=for-the-badge&logo=hackthebox&logoColor=white)](https://github.com/ysfAskri/archguard/releases)
 [![license](https://img.shields.io/badge/license-MIT-blue?style=for-the-badge&logo=opensourceinitiative&logoColor=white)](LICENSE)
 [![node](https://img.shields.io/badge/node-%3E%3D18-339933?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
 [![typescript](https://img.shields.io/badge/TypeScript-5.6+-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
