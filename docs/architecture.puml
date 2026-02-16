@@ -1,57 +1,28 @@
-@startuml how-it-works
-skinparam backgroundColor transparent
-skinparam defaultFontName Inter, Helvetica, Arial, sans-serif
-skinparam defaultFontSize 13
+@startuml
+
 skinparam shadowing false
-skinparam roundcorner 12
-skinparam padding 8
+skinparam roundcorner 8
+skinparam backgroundColor white
 
-skinparam activity {
-  BackgroundColor #f8fafc
-  BorderColor #94a3b8
-  FontColor #1e293b
-  DiamondBackgroundColor #fef3c7
-  DiamondBorderColor #f59e0b
-  DiamondFontColor #92400e
+rectangle "**git commit**" as commit #e0e7ff
+rectangle "archguardian" as guard #f5f3ff {
+  rectangle "Parse diff + AST" as parse #ffffff
+  rectangle "Analyze" as analyze #ffffff
 }
+rectangle "Commit OK" as ok #dcfce7
+rectangle "Commit blocked" as blocked #fee2e2
 
-skinparam arrow {
-  Color #6366f1
-  FontColor #475569
-}
+commit -down-> parse
+parse -down-> analyze
+analyze -down-> ok : no issues
+analyze -down-> blocked : issues found
 
-|#f0f9ff|Developer|
-start
-:Write code with **AI tools**\n(Cursor, Copilot, Claude Code);
-
-|#f5f3ff|Git|
-:**git commit**;
-
-|#faf5ff|archguardian|
-:Parse staged diff;
-:Build **AST** via tree-sitter;
-
-fork
-  :Security\n//secrets, XSS, SQLi//;
-fork again
-  :AI Smells\n//comments, imports//;
-fork again
-  :Conventions\n//naming rules//;
-fork again
-  :Duplicates\n//clone detection//;
-fork again
-  :Architecture\n//layer violations//;
-end fork
-
-:Aggregate findings;
-
-|#f0f9ff|Developer|
-if (Issues found?) then (yes)
-  #fee2e2:Commit **blocked**\nwith actionable report;
-  stop
-else (no)
-  #dcfce7:Commit **passes**;
-  stop
-endif
+note right of analyze
+  Security
+  AI smells
+  Conventions
+  Duplicates
+  Architecture
+end note
 
 @enduml
