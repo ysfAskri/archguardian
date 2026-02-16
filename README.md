@@ -125,7 +125,7 @@ Formats: `terminal` (default), `json`, `sarif` &mdash; Exit codes: `0` pass, `1`
 ## How it works
 
 <p align="center">
-  <img src="https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/ysfAskri/archguardian/master/docs/architecture.puml" alt="How archguardian works" width="520">
+  <img src="https://www.plantuml.com/plantuml/proxy?cache=no&v=3&src=https://raw.githubusercontent.com/ysfAskri/archguardian/master/docs/architecture.puml" alt="How archguardian works" width="520">
 </p>
 
 Only **changed lines** are checked in pre-commit mode — no noise from existing code.
