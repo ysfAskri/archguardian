@@ -122,39 +122,13 @@ archguardian metrics [--json]      Show findings trend over time
 
 Formats: `terminal` (default), `json`, `sarif` &mdash; Exit codes: `0` pass, `1` errors, `2` warnings exceeded, `3` config error, `5` timeout.
 
-## Architecture
+## How it works
 
 <p align="center">
-  <img src="https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/ysfAskri/archguardian/master/docs/architecture.puml" alt="C4 Architecture Diagram" width="900">
+  <img src="https://www.plantuml.com/plantuml/proxy?cache=no&src=https://raw.githubusercontent.com/ysfAskri/archguardian/master/docs/architecture.puml" alt="How archguardian works" width="520">
 </p>
 
-<details>
-<summary>How the pipeline works</summary>
-
-```
-git commit
-    |
-    v
- Parse staged diff ──> Filter files ──> AST parse (tree-sitter WASM)
-                                              |
-                                              v
-                                    Run analyzers in parallel
-                                     (5s timeout per analyzer)
-                                              |
-                                              v
-                                    Aggregate + deduplicate
-                                              |
-                                    ┌─────────┴─────────┐
-                                    v                     v
-                               0 findings            findings > 0
-                               commit OK             commit blocked
-```
-
-</details>
-
 Only **changed lines** are checked in pre-commit mode — no noise from existing code.
-
-> [View the PlantUML C4 source](docs/architecture.puml)
 
 ## Roadmap
 
