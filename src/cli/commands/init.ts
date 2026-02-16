@@ -33,7 +33,7 @@ async function detectLanguages(root: string): Promise<string[]> {
   const found = new Set<string>();
 
   async function walk(dir: string, depth: number) {
-    if (depth > 4) return;
+    if (depth > 6) return;
     let entries;
     try { entries = await readdir(dir, { withFileTypes: true }); } catch { return; }
 

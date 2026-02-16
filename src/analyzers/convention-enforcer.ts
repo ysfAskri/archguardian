@@ -79,6 +79,9 @@ export class ConventionEnforcer extends BaseAnalyzer {
       if (IGNORED_NAMES.has(name)) return;
       if (name.startsWith('_')) return; // Private convention
 
+      // In TSX/JSX files, PascalCase functions are React components — skip them
+      if (/\.[jt]sx$/.test(file.path) && /^[A-Z]/.test(name)) return;
+
       // Skip constructors, getters, setters
       if (name === 'constructor' || node.type === 'method_definition') {
         const kindNode = node.children.find(c => c.type === 'get' || c.type === 'set');
@@ -184,8 +187,12 @@ export class ConventionEnforcer extends BaseAnalyzer {
     const findings: Finding[] = [];
     const fileName = basename(filePath).replace(/\.[^.]+$/, '');
 
-    // Skip index files and config files
-    if (fileName === 'index' || fileName.startsWith('.')) return findings;
+    // Skip index files, dotfiles, and framework config files (next.config.ts, postcss.config.mjs, etc.)
+    if (fileName === 'index' || fileName.startsWith('.') || fileName.startsWith('__')) return findings;
+    if (/\.config$/.test(fileName) || /\.config\.\w+$/.test(basename(filePath))) return findings;
+
+    // Python files use snake_case by PEP 8 — don't enforce kebab-case on them
+    if (convention === 'kebab-case' && /\.py$/.test(filePath)) return findings;
 
     if (!matchesConvention(fileName, convention)) {
       findings.push(this.createFinding(

@@ -1,10 +1,8 @@
 import type {
   AnalysisContext,
-  ArchitectureConfig,
   ArchitectureLayer,
   ArchitectureRule,
   Finding,
-  ParsedFile,
 } from '../core/types.js';
 import { Severity } from '../core/types.js';
 import { BaseAnalyzer } from './base-analyzer.js';

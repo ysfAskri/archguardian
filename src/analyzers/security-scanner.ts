@@ -277,11 +277,7 @@ export class SecurityScanner extends BaseAnalyzer {
       if (!changedLines.has(lineNum)) return;
 
       const pattern = node.text;
-      // Strip character classes [...] before checking for nested quantifiers,
-      // since quantifiers inside character classes are literal and safe.
-      const withoutCharClasses = pattern.replace(/\[(?:[^\]\\]|\\.)*\]/g, '');
-      // Simple heuristic for ReDoS: nested quantifiers outside character classes
-      if (/(\+|\*|\{)\s*(\+|\*|\{)/.test(withoutCharClasses) || /\([^)]*(\+|\*)[^)]*\)\+/.test(withoutCharClasses)) {
+      if (this.hasReDoSRisk(pattern)) {
         findings.push(this.createFinding(
           'security/unsafe-regex',
           file.path,
@@ -297,5 +293,43 @@ export class SecurityScanner extends BaseAnalyzer {
     });
 
     return findings;
+  }
+
+  /**
+   * Detect regex patterns at risk of catastrophic backtracking (ReDoS).
+   *
+   * Only flags patterns with *star height > 1* — a quantified group that
+   * contains another quantifier — **and** where group boundaries are
+   * ambiguous.  Groups with a required literal separator (e.g. the `_` in
+   * `(_[a-z0-9]+)*`) are safe because the engine can always determine
+   * where one iteration ends and the next begins.
+   */
+  private hasReDoSRisk(pattern: string): boolean {
+    // Replace character classes with a placeholder to preserve structure.
+    // Stripping them entirely merges adjacent tokens and creates false positives.
+    const simplified = pattern.replace(/\[(?:[^\]\\]|\\.)*\]/g, '#');
+
+    // Find quantified groups that contain an inner quantifier.
+    const groupRegex = /\(([^)]+)\)(?:[+*]|\{[^}]*,)/g;
+    let m: RegExpExecArray | null;
+    while ((m = groupRegex.exec(simplified)) !== null) {
+      const content = m[1];
+      // Skip groups without an inner quantifier — no nesting, no risk.
+      if (!/[+*]/.test(content)) continue;
+
+      // The group is safe if it contains a *required literal anchor* — a
+      // literal character not followed by a quantifier.  For example, in
+      // `(_#+)*` the `_` is a literal anchor: each group iteration must
+      // start with `_`, so the engine never faces ambiguous boundaries.
+      //
+      // Dangerous elements (char-class placeholder #, wildcard ., escapes \)
+      // are excluded from the literal-anchor check.
+      const hasLiteralAnchor = /[^#.\\+*?{}()|](?![+*?{])/.test(content);
+      if (!hasLiteralAnchor) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }

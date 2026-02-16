@@ -168,7 +168,7 @@ export class AiSmellDetector extends BaseAnalyzer {
       const tryLines = tryBody.endPosition.row - tryBody.startPosition.row;
       const catchLines = catchBody.endPosition.row - catchBody.startPosition.row;
 
-      if (catchLines > tryLines * 2 && catchLines > 5) {
+      if (catchLines > tryLines * 3 && catchLines > 15) {
         findings.push(this.createFinding(
           'ai-smell/verbose-error-handling',
           file.path,
@@ -238,19 +238,29 @@ export class AiSmellDetector extends BaseAnalyzer {
 
   private checkCopyPastePatterns(file: ParsedFile, changedLines: Set<number>): Finding[] {
     const findings: Finding[] = [];
+    const lines = file.content.split('\n');
     const addedLines = [...changedLines]
       .sort((a, b) => a - b)
-      .map(n => file.content.split('\n')[n - 1]?.trim())
+      .map(n => lines[n - 1]?.trim())
       .filter((line): line is string => !!line && line.length > 20);
 
-    if (addedLines.length < 6) return findings;
+    if (addedLines.length < 10) return findings;
 
-    // Look for repeated blocks of 3+ lines within the diff
-    const blockSize = 3;
+    // Look for repeated blocks of 6+ substantive lines within the diff.
+    // Using 6 instead of 3 avoids flagging structural patterns that
+    // naturally repeat (similar method signatures, error handling, etc.).
+    const blockSize = 6;
     const blocks = new Map<string, number[]>();
 
     for (let i = 0; i <= addedLines.length - blockSize; i++) {
-      const block = addedLines.slice(i, i + blockSize).join('\n');
+      const blockLines = addedLines.slice(i, i + blockSize);
+
+      // Skip blocks dominated by boilerplate (braces, returns, imports)
+      // or single function/method calls that naturally repeat with different args
+      const substantive = blockLines.filter(l => !this.isBoilerplate(l) && !this.isSingleCall(l));
+      if (substantive.length < 3) continue;
+
+      const block = blockLines.join('\n');
       const existing = blocks.get(block);
       if (existing) {
         existing.push(i);
@@ -259,7 +269,7 @@ export class AiSmellDetector extends BaseAnalyzer {
       }
     }
 
-    for (const [block, positions] of blocks) {
+    for (const [, positions] of blocks) {
       if (positions.length >= 2) {
         const sortedChanged = [...changedLines].sort((a, b) => a - b);
         const firstLine = sortedChanged[positions[0]] ?? sortedChanged[0];
@@ -277,5 +287,20 @@ export class AiSmellDetector extends BaseAnalyzer {
     }
 
     return findings;
+  }
+
+  private isBoilerplate(line: string): boolean {
+    const t = line.trim();
+    return (
+      t === '{' || t === '}' || t === '});' || t === ']);' ||
+      t === ')' || t === ');' || t === 'break;' || t === 'continue;' ||
+      t.startsWith('return ') || t.startsWith('import ') || t.startsWith('export ')
+    );
+  }
+
+  /** A single method/function call like `findings.push(...)` — these naturally repeat with different args. */
+  private isSingleCall(line: string): boolean {
+    const t = line.trim();
+    return /^\w+[\w.]*\(.*\)[;,]?$/.test(t);
   }
 }
