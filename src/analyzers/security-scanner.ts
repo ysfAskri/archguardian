@@ -117,7 +117,8 @@ export class SecurityScanner extends BaseAnalyzer {
       if (!changedLines.has(lineNum)) return;
 
       const text = node.text;
-      if (SQL_KEYWORDS.test(text) && node.namedChildCount > 0) {
+      if (!this.looksLikeSql(text)) return;
+      if (node.namedChildCount > 0) {
         // Has interpolation expressions — potential SQL injection
         findings.push(this.createFinding(
           'security/sql-injection',
@@ -143,7 +144,7 @@ export class SecurityScanner extends BaseAnalyzer {
       if (!changedLines.has(lineNum)) return;
 
       const text = node.text;
-      if (SQL_KEYWORDS.test(text)) {
+      if (this.looksLikeSql(text)) {
         const hasVariable = node.descendantsOfType('identifier').length > 0;
         if (hasVariable) {
           findings.push(this.createFinding(
@@ -254,6 +255,19 @@ export class SecurityScanner extends BaseAnalyzer {
     return findings;
   }
 
+  /**
+   * Check if text actually looks like a SQL query, not just an error message
+   * that happens to contain a SQL keyword like "update".
+   * Requires a SQL statement keyword followed by a table-like context.
+   */
+  private looksLikeSql(text: string): boolean {
+    // Must contain a SQL statement keyword
+    if (!SQL_KEYWORDS.test(text)) return false;
+    // Require SQL-specific patterns: keyword + FROM/INTO/TABLE/SET/WHERE/VALUES
+    const sqlContext = /\b(?:SELECT\s+.+\s+FROM|INSERT\s+INTO|UPDATE\s+\S+\s+SET|DELETE\s+FROM|DROP\s+TABLE|CREATE\s+TABLE|ALTER\s+TABLE)\b/i;
+    return sqlContext.test(text);
+  }
+
   private checkUnsafeRegex(file: ParsedFile, changedLines: Set<number>): Finding[] {
     const findings: Finding[] = [];
 
@@ -263,8 +277,11 @@ export class SecurityScanner extends BaseAnalyzer {
       if (!changedLines.has(lineNum)) return;
 
       const pattern = node.text;
-      // Simple heuristic for ReDoS: nested quantifiers
-      if (/(\+|\*|\{)\s*(\+|\*|\{)/.test(pattern) || /\([^)]*(\+|\*)[^)]*\)\+/.test(pattern)) {
+      // Strip character classes [...] before checking for nested quantifiers,
+      // since quantifiers inside character classes are literal and safe.
+      const withoutCharClasses = pattern.replace(/\[(?:[^\]\\]|\\.)*\]/g, '');
+      // Simple heuristic for ReDoS: nested quantifiers outside character classes
+      if (/(\+|\*|\{)\s*(\+|\*|\{)/.test(withoutCharClasses) || /\([^)]*(\+|\*)[^)]*\)\+/.test(withoutCharClasses)) {
         findings.push(this.createFinding(
           'security/unsafe-regex',
           file.path,

@@ -89,10 +89,17 @@ export class AiSmellDetector extends BaseAnalyzer {
         if (!changedLines.has(lineNum)) return;
 
         walk(node, (child) => {
-          if (
+          if (child.type === 'import_specifier') {
+            // For aliased imports like `import { parse as parseYaml }`,
+            // the local name (alias) is what matters for usage tracking.
+            const alias = child.childForFieldName('alias');
+            const name = alias ?? child.childForFieldName('name');
+            if (name && name.type === 'identifier') {
+              imports.push({ name: name.text, line: lineNum, node: name });
+            }
+          } else if (
             child.type === 'identifier' &&
-            (child.parent?.type === 'import_specifier' ||
-             child.parent?.type === 'import_clause' ||
+            (child.parent?.type === 'import_clause' ||
              child.parent?.type === 'namespace_import')
           ) {
             imports.push({ name: child.text, line: lineNum, node: child });

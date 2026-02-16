@@ -1,4 +1,4 @@
-import type { AnalysisSummary, Finding } from '../../core/types.js';
+import type { AnalysisSummary } from '../../core/types.js';
 
 export interface JsonOutput {
   version: string;
