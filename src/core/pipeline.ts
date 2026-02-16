@@ -1,6 +1,7 @@
 import type { AnalysisContext, AnalysisSummary, Analyzer, AnalyzerResult, Finding } from './types.js';
 import { withTimeout, timed } from '../utils/performance.js';
 import { logger } from '../utils/logger.js';
+import { enhanceWithLlmSuggestions } from '../llm/index.js';
 
 const ANALYZER_TIMEOUT_MS = 5000;
 
@@ -34,7 +35,17 @@ export async function runPipeline(
     };
   });
 
-  const allFindings = deduplicateFindings(analyzerResults.flatMap(r => r.findings));
+  let allFindings = deduplicateFindings(analyzerResults.flatMap(r => r.findings));
+
+  // Enhance findings with LLM suggestions if enabled
+  if (context.config.llm.enabled) {
+    try {
+      allFindings = await enhanceWithLlmSuggestions(allFindings, context);
+    } catch (err) {
+      logger.warn(`LLM enhancement failed: ${(err as Error).message}`);
+    }
+  }
+
   const duration = performance.now() - startTime;
 
   return {

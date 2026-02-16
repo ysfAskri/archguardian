@@ -15,6 +15,9 @@ const GRAMMAR_FILES: Record<string, string> = {
   javascript: 'tree-sitter-javascript.wasm',
   jsx: 'tree-sitter-javascript.wasm',
   python: 'tree-sitter-python.wasm',
+  go: 'tree-sitter-go.wasm',
+  rust: 'tree-sitter-rust.wasm',
+  java: 'tree-sitter-java.wasm',
 };
 
 async function ensureInit(): Promise<typeof Parser> {

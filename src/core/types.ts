@@ -42,7 +42,7 @@ export interface FileInfo {
   content?: string;
 }
 
-export type SupportedLanguage = 'typescript' | 'javascript' | 'tsx' | 'jsx' | 'python';
+export type SupportedLanguage = 'typescript' | 'javascript' | 'tsx' | 'jsx' | 'python' | 'go' | 'rust' | 'java';
 
 // ── AST Types ──────────────────────────────────────────────────────
 
@@ -167,7 +167,7 @@ export interface ArchitectureConfig {
 
 export interface LlmConfig {
   enabled: boolean;
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'gemini';
   model?: string;
   apiKey?: string;
 }

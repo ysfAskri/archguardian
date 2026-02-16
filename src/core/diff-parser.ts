@@ -14,6 +14,9 @@ const LANGUAGE_MAP: Record<string, SupportedLanguage> = {
   '.mjs': 'javascript',
   '.cjs': 'javascript',
   '.py': 'python',
+  '.go': 'go',
+  '.rs': 'rust',
+  '.java': 'java',
 };
 
 export function detectLanguage(filePath: string): SupportedLanguage | null {

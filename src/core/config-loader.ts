@@ -6,7 +6,7 @@ import { Severity, type ArchGuardConfig } from './types.js';
 
 const SeverityEnum = z.nativeEnum(Severity);
 const NamingConventionEnum = z.enum(['camelCase', 'PascalCase', 'snake_case', 'UPPER_SNAKE', 'kebab-case']);
-const LanguageEnum = z.enum(['typescript', 'javascript', 'tsx', 'jsx', 'python']);
+const LanguageEnum = z.enum(['typescript', 'javascript', 'tsx', 'jsx', 'python', 'go', 'rust', 'java']);
 
 const ConfigSchema = z.object({
   version: z.number().default(1),
@@ -65,7 +65,7 @@ const ConfigSchema = z.object({
   }).default({}),
   llm: z.object({
     enabled: z.boolean().default(false),
-    provider: z.enum(['openai', 'anthropic']).default('openai'),
+    provider: z.enum(['openai', 'anthropic', 'gemini']).default('openai'),
     model: z.string().optional(),
     apiKey: z.string().optional(),
   }).default({}),

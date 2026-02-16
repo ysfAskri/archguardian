@@ -1,0 +1,30 @@
+{
+  "name": "archguardian-vscode",
+  "displayName": "Architecture Guardian",
+  "description": "Inline diagnostics for security issues, AI code smells, and convention violations",
+  "version": "0.1.0",
+  "publisher": "ysfAskri",
+  "engines": { "vscode": "^1.85.0" },
+  "categories": ["Linters"],
+  "activationEvents": ["onLanguage:typescript", "onLanguage:javascript", "onLanguage:typescriptreact", "onLanguage:javascriptreact", "onLanguage:python", "onLanguage:go", "onLanguage:rust", "onLanguage:java"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [{ "command": "archguardian.scan", "title": "Archguardian: Scan Current File" }],
+    "configuration": {
+      "title": "Architecture Guardian",
+      "properties": {
+        "archguardian.enable": { "type": "boolean", "default": true, "description": "Enable archguardian diagnostics" },
+        "archguardian.scanOnSave": { "type": "boolean", "default": true, "description": "Run scan on file save" }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "watch": "tsc -watch -p ."
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}

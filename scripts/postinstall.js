@@ -12,6 +12,9 @@ const GRAMMARS = [
   { pkg: 'tree-sitter-typescript', file: 'tree-sitter-typescript.wasm' },
   { pkg: 'tree-sitter-typescript', file: 'tree-sitter-tsx.wasm' },
   { pkg: 'tree-sitter-javascript', file: 'tree-sitter-javascript.wasm' },
+  { pkg: 'tree-sitter-go', file: 'tree-sitter-go.wasm' },
+  { pkg: 'tree-sitter-rust', file: 'tree-sitter-rust.wasm' },
+  { pkg: 'tree-sitter-java', file: 'tree-sitter-java.wasm' },
 ];
 
 async function main() {

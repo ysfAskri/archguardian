@@ -2,6 +2,9 @@ import type { AnalysisContext, ArchGuardConfig, FileInfo, ParsedFile } from './t
 import { getFileContent } from '../utils/git.js';
 import { parseTypeScript, isTypeScriptFamily } from '../parsers/typescript-parser.js';
 import { parsePython, isPython } from '../parsers/python-parser.js';
+import { parseGo, isGo } from '../parsers/go-parser.js';
+import { parseRust, isRust } from '../parsers/rust-parser.js';
+import { parseJava, isJava } from '../parsers/java-parser.js';
 import { isTreeSitterAvailable } from '../parsers/tree-sitter-manager.js';
 import { logger } from '../utils/logger.js';
 import { minimatch } from 'minimatch';
@@ -44,6 +47,15 @@ export async function buildContext(
         parsedFiles.push(parsed);
       } else if (isPython(file.language)) {
         const parsed = await parsePython(content, file.path);
+        parsedFiles.push(parsed);
+      } else if (isGo(file.language)) {
+        const parsed = await parseGo(content, file.path);
+        parsedFiles.push(parsed);
+      } else if (isRust(file.language)) {
+        const parsed = await parseRust(content, file.path);
+        parsedFiles.push(parsed);
+      } else if (isJava(file.language)) {
+        const parsed = await parseJava(content, file.path);
         parsedFiles.push(parsed);
       }
     } catch (err) {
