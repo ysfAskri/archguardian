@@ -1,0 +1,31 @@
+# Architecture Guardian — dogfooding config (the tool checks itself)
+version: 1
+languages: [typescript]
+include: ["src/**"]
+exclude: ["**/*.test.ts", "**/node_modules/**", "**/dist/**", "**/fixtures/**"]
+
+severity:
+  failOn: error
+  maxWarnings: 10
+
+analyzers:
+  security:
+    enabled: true
+    severity: error
+  aiSmells:
+    enabled: true
+    severity: warning
+    commentRatio: 0.3
+  conventions:
+    enabled: true
+    severity: warning
+    naming:
+      functions: camelCase
+      classes: PascalCase
+      constants: UPPER_SNAKE
+      files: kebab-case
+    autoLearn: false
+  duplicates:
+    enabled: false
+  architecture:
+    enabled: false

@@ -1,0 +1,64 @@
+{
+  "name": "archguard",
+  "version": "0.1.0",
+  "description": "Stop AI from slowly destroying your codebase. Tool-agnostic CLI + git pre-commit hook that catches architectural violations, duplication, convention drift, security issues, and AI-specific code smells.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "archguard": "./dist/cli/index.js"
+  },
+  "files": [
+    "dist",
+    "wasm"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "architecture",
+    "code-quality",
+    "static-analysis",
+    "security",
+    "ai-code",
+    "pre-commit",
+    "git-hooks",
+    "linting",
+    "conventions",
+    "duplication"
+  ],
+  "author": "ysfAskri",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ysfAskri/archguard"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "cli-table3": "^0.6.5",
+    "commander": "^12.1.0",
+    "minimatch": "^10.0.1",
+    "ora": "^8.1.0",
+    "simple-git": "^3.27.0",
+    "web-tree-sitter": "^0.24.3",
+    "yaml": "^2.6.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tree-sitter-javascript": "^0.25.0",
+    "tree-sitter-typescript": "^0.23.2",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

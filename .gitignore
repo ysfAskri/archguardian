@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.archguard/
+coverage/
+*.tsbuildinfo
+.DS_Store
