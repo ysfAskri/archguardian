@@ -1,12 +1,12 @@
 {
-  "name": "archguard",
+  "name": "archguardian",
   "version": "0.1.0",
   "description": "Stop AI from slowly destroying your codebase. Tool-agnostic CLI + git pre-commit hook that catches architectural violations, duplication, convention drift, security issues, and AI-specific code smells.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "archguard": "./dist/cli/index.js"
+    "archguardian": "./dist/cli/index.js"
   },
   "files": [
     "dist",

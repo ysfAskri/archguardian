@@ -49,11 +49,11 @@ export async function initCommand(options: { force?: boolean }): Promise<number>
     }
   } catch (err) {
     console.log(chalk.yellow(`  Could not install pre-commit hook: ${(err as Error).message}`));
-    console.log(chalk.gray('  You can manually add "npx archguard check" to your pre-commit hook'));
+    console.log(chalk.gray('  You can manually add "npx archguardian check" to your pre-commit hook'));
   }
 
   console.log('');
-  console.log(chalk.green('  Done! Run ') + chalk.cyan('archguard scan') + chalk.green(' to check your project.'));
+  console.log(chalk.green('  Done! Run ') + chalk.cyan('archguardian scan') + chalk.green(' to check your project.'));
   console.log('');
 
   return ExitCode.Success;

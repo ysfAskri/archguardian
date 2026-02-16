@@ -1,4 +1,4 @@
-export const PRE_COMMIT_SCRIPT = `npx archguard check
+export const PRE_COMMIT_SCRIPT = `npx archguardian check
 RESULT=$?
 if [ $RESULT -ne 0 ]; then
   echo ""

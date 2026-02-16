@@ -8,7 +8,7 @@ import { setLogLevel, LogLevel } from '../utils/logger.js';
 const program = new Command();
 
 program
-  .name('archguard')
+  .name('archguardian')
   .description('Stop AI from slowly destroying your codebase.')
   .version('0.1.0')
   .option('--verbose', 'Enable debug logging')
@@ -20,7 +20,7 @@ program
 
 program
   .command('init')
-  .description('Initialize archguard: create config + install git hook')
+  .description('Initialize archguardian: create config + install git hook')
   .option('--force', 'Overwrite existing config')
   .action(async (options) => {
     const code = await initCommand(options);

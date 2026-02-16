@@ -101,13 +101,13 @@ Three commands. Thirty seconds. Done.
 
 ```bash
 # 1️⃣  Initialize in your project
-npx archguard init
+npx archguardian init
 
 # 2️⃣  Scan your entire codebase
-npx archguard scan
+npx archguardian scan
 
 # 3️⃣  That's it — staged changes are now checked automatically before every commit
-git commit -m "feat: new feature"   # archguard runs automatically 🛡️
+git commit -m "feat: new feature"   # archguardian runs automatically 🛡️
 ```
 
 <details>
@@ -265,7 +265,7 @@ All fully configurable per project.
 
 ## ⚙️ Configuration
 
-Run `archguard init` or create `.archguard.yml` manually:
+Run `archguardian init` or create `.archguard.yml` manually:
 
 ```yaml
 # .archguard.yml
@@ -308,7 +308,7 @@ analyzers:
 ## 🖥️ CLI Reference
 
 ```
-Usage: archguard [options] [command]
+Usage: archguardian [options] [command]
 
 Stop AI from slowly destroying your codebase.
 
@@ -371,7 +371,7 @@ Commands:
 </tr>
 <tr>
 <td><b>v0.2.0</b></td>
-<td>Duplicate detection · Layer violation checks · Python support · <code>archguard learn</code> · JSON output</td>
+<td>Duplicate detection · Layer violation checks · Python support · <code>archguardian learn</code> · JSON output</td>
 <td>🚧 Next</td>
 </tr>
 <tr>
@@ -452,7 +452,7 @@ archguard/
 
 <br>
 
-⭐ **Star this repo** if archguard saved your codebase from AI-generated chaos.
+⭐ **Star this repo** if archguardian saved your codebase from AI-generated chaos.
 
 <br>
 
