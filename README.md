@@ -223,6 +223,70 @@ Output formats: `terminal` (default), `json`, `sarif`
 
 Exit codes: `0` pass, `1` errors found, `2` warnings exceeded threshold, `3` config error
 
+## Use with AI coding tools
+
+archguardian ships with ready-made configurations for all major AI coding assistants. After `npx archguardian init`, your AI tool can scan, fix, and suppress findings using natural language.
+
+### Claude Code
+
+Add to your project's `CLAUDE.md`:
+
+```markdown
+## archguardian
+
+- Run `npx archguardian scan --format json` to analyze the project
+- Run `npx archguardian check --format json` to analyze staged changes before committing
+- Run `npx archguardian fix --dry-run` to preview fixes, then `npx archguardian fix` to apply
+- Run `npx archguardian scan --update-baseline` to snapshot current findings for incremental adoption
+- Add `// archguard-ignore <rule-id>` above a line to suppress a specific rule
+```
+
+Then just ask: *"scan this project"*, *"fix the warnings"*, *"suppress this false positive"*.
+
+### Cursor
+
+Create `.cursor/rules/archguardian.mdc`:
+
+```markdown
+---
+description: Scan and fix code quality issues with archguardian
+globs: "**/*"
+alwaysApply: false
+---
+
+# archguardian
+
+- Scan: `npx archguardian scan --format json`
+- Check staged: `npx archguardian check --format json`
+- Auto-fix: preview with `npx archguardian fix --dry-run`, apply with `npx archguardian fix`
+- Baseline: `npx archguardian scan --update-baseline` to adopt incrementally
+- Suppress: add `// archguard-ignore <rule-id>` above the line
+```
+
+### GitHub Copilot
+
+Create `.github/copilot-instructions.md`:
+
+```markdown
+# archguardian
+
+This project uses archguardian for code quality. Key commands:
+
+- `npx archguardian scan --format json` — full project scan
+- `npx archguardian check --format json` — staged changes only
+- `npx archguardian fix --dry-run` — preview auto-fixes
+- `npx archguardian fix` — apply fixes
+- `npx archguardian scan --update-baseline` — baseline for incremental adoption
+
+Inline suppression: `// archguard-ignore <rule-id>` above the line.
+```
+
+### Windsurf / Cline / Aider
+
+Same pattern — drop a rules file in the tool's config directory (`.windsurf/rules/`, `.clinerules/`, or `.aider.conf.yml` pointing to `CLAUDE.md`). See the [config files in this repo](https://github.com/ysfAskri/archguardian/tree/master/.cursor/rules) for ready-made examples.
+
+> **Tip**: Use `--format json` when your AI tool runs archguardian. JSON output is structured and easier for the AI to parse, explain, and act on.
+
 ## CI/CD
 
 ### GitHub Action

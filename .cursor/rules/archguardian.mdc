@@ -14,7 +14,7 @@ Pre-commit hook and CLI that catches security issues, AI-generated code smells, 
 src/
 ├── cli/          Commander.js entry, 8 commands, output formatters (terminal, JSON, SARIF)
 ├── core/         Pipeline orchestrator, config loader, diff parser, suppression directives, baseline mode, types
-├── parsers/      Tree-sitter WASM manager (TS/JS/Python/Go/Rust/Java) + AST utilities
+├── parsers/      ast-grep NAPI parser (TS/JS/Python/Go/Rust/Java) + AST utilities
 ├── analyzers/    Security, AI smells, conventions, duplicates, layer violations
 ├── plugins/      Dynamic plugin loader for external analyzers
 ├── llm/          LLM client (OpenAI, Anthropic, Gemini), prompt builder, file-based cache
@@ -34,7 +34,7 @@ src/
 
 - ESM-only (`"type": "module"`), all imports use `.js` extensions
 - Node >= 18 required
-- AST parsing via web-tree-sitter WASM grammars (not regex)
+- AST parsing via ast-grep NAPI (native tree-sitter bindings, not WASM)
 - Tests in `tests/unit/`, `tests/integration/`, `tests/e2e/` using vitest
 - Config file: `.archguard.yml` validated with Zod schemas
 - Pipeline: analyzers run in parallel → deduplicate → suppress inline → filter baseline → optional LLM enhance
