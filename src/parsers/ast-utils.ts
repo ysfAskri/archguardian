@@ -11,7 +11,7 @@ export function findNodes(tree: SgRoot, types: string[]): SgNode[] {
   const results: SgNode[] = [];
   const typeSet = new Set(types);
   walk(tree.root(), (node) => {
-    if (typeSet.has(node.kind())) {
+    if (typeSet.has(node.kind() as string)) {
       results.push(node);
     }
   });
