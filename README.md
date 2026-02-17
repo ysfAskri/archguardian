@@ -13,6 +13,15 @@
 </p>
 
 <p align="center">
+  <a href="#use-with-ai-coding-tools"><img src="https://img.shields.io/badge/Claude_Code-skills-d97706?style=flat-square&logo=anthropic&logoColor=white" alt="Claude Code"></a>
+  <a href="#use-with-ai-coding-tools"><img src="https://img.shields.io/badge/Cursor-commands-00b4d8?style=flat-square&logo=cursor&logoColor=white" alt="Cursor"></a>
+  <a href="#use-with-ai-coding-tools"><img src="https://img.shields.io/badge/Copilot-prompts-1f883d?style=flat-square&logo=githubcopilot&logoColor=white" alt="GitHub Copilot"></a>
+  <a href="#use-with-ai-coding-tools"><img src="https://img.shields.io/badge/Windsurf-workflows-0ea5e9?style=flat-square&logo=codeium&logoColor=white" alt="Windsurf"></a>
+  <a href="#use-with-ai-coding-tools"><img src="https://img.shields.io/badge/Cline-rules-a855f7?style=flat-square&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0id2hpdGUiPjxwYXRoIGQ9Ik0xMiAyQzYuNDggMiAyIDYuNDggMiAxMnM0LjQ4IDEwIDEwIDEwIDEwLTQuNDggMTAtMTBTMTcuNTIgMiAxMiAyem0wIDE4Yy00LjQyIDAtOC0zLjU4LTgtOHMzLjU4LTggOC04IDggMy41OCA4IDgtMy41OCA4LTggOHoiLz48L3N2Zz4=" alt="Cline"></a>
+  <a href="#use-with-ai-coding-tools"><img src="https://img.shields.io/badge/Aider-compatible-22c55e?style=flat-square" alt="Aider"></a>
+</p>
+
+<p align="center">
   Cursor, Copilot, Claude Code &mdash; they write code 10x faster.<br>
   <strong>archguardian</strong> makes sure that code doesn't wreck your codebase.
 </p>
