@@ -8,7 +8,7 @@ export default defineConfig([
     clean: true,
     target: 'node18',
     banner: { js: '#!/usr/bin/env node' },
-    external: ['web-tree-sitter'],
+    external: [/^@ast-grep\//],
   },
   {
     entry: { index: 'src/index.ts' },
@@ -16,6 +16,6 @@ export default defineConfig([
     dts: true,
     sourcemap: true,
     target: 'node18',
-    external: ['web-tree-sitter'],
+    external: [/^@ast-grep\//],
   },
 ]);

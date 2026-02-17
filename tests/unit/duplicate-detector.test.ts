@@ -21,11 +21,8 @@ function dupConfig(similarity = 0.85): ArchGuardConfig {
 }
 
 /**
- * Minimal mock tree whose rootNode exposes children created from the
- * source text. Each "child" simulates a function_declaration spanning
- * the given lines. The mock is intentionally simple — the duplicate
- * detector relies on `findNodes` which calls `walk`, so we build
- * just enough structure for that to work.
+ * Minimal mock SgNode for the duplicate detector. The detector relies on
+ * `findNodes` which calls `walk`, so we build just enough structure.
  */
 function createMockNode(
   type: string,
@@ -34,38 +31,48 @@ function createMockNode(
   endRow: number,
   children: any[] = [],
 ): any {
-  return {
-    type,
-    text,
-    startPosition: { row: startRow, column: 0 },
-    endPosition: { row: endRow, column: 0 },
-    childCount: children.length,
-    namedChildCount: children.length,
+  const node: any = {
+    kind: () => type,
+    text: () => text,
+    range: () => ({
+      start: { line: startRow, column: 0, index: 0 },
+      end: { line: endRow, column: 0, index: 0 },
+    }),
+    children: () => children,
     child: (i: number) => children[i] ?? null,
-    namedChild: (i: number) => children[i] ?? null,
-    childForFieldName: () => null,
-    descendantsOfType: () => [],
-    parent: null,
+    field: () => null,
+    parent: () => null,
+    isNamed: () => true,
+    isLeaf: () => children.length === 0,
   };
+  // Set parent on children
+  for (const c of children) {
+    c.parent = () => node;
+  }
+  return node;
 }
 
 function createMockTree(nodes: any[]): any {
   const rootChildren = nodes;
-  return {
-    rootNode: {
-      type: 'program',
-      text: '',
-      startPosition: { row: 0, column: 0 },
-      endPosition: { row: 100, column: 0 },
-      childCount: rootChildren.length,
-      namedChildCount: rootChildren.length,
-      child: (i: number) => rootChildren[i] ?? null,
-      namedChild: (i: number) => rootChildren[i] ?? null,
-      childForFieldName: () => null,
-      descendantsOfType: () => [],
-      parent: null,
-    },
+  const rootNode: any = {
+    kind: () => 'program',
+    text: () => '',
+    range: () => ({
+      start: { line: 0, column: 0, index: 0 },
+      end: { line: 100, column: 0, index: 0 },
+    }),
+    children: () => rootChildren,
+    child: (i: number) => rootChildren[i] ?? null,
+    field: () => null,
+    parent: () => null,
+    isNamed: () => true,
+    isLeaf: () => rootChildren.length === 0,
   };
+  // Set parent on children
+  for (const c of rootChildren) {
+    c.parent = () => rootNode;
+  }
+  return { root: () => rootNode };
 }
 
 /** Build a leaf node (keyword, operator, punctuation). */

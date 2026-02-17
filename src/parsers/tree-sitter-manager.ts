@@ -1,85 +1,37 @@
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import type Parser from 'web-tree-sitter';
+import { parse, registerDynamicLanguage, type SgRoot } from '@ast-grep/napi';
+import python from '@ast-grep/lang-python';
+import go from '@ast-grep/lang-go';
+import rust from '@ast-grep/lang-rust';
+import java from '@ast-grep/lang-java';
 import type { SupportedLanguage } from '../core/types.js';
 import { logger } from '../utils/logger.js';
 
-let TreeSitter: typeof Parser | null = null;
-let initialized = false;
-const languageCache = new Map<string, Parser.Language>();
-const parserPool = new Map<string, Parser>();
+registerDynamicLanguage({ python, go, rust, java });
 
-const GRAMMAR_FILES: Record<string, string> = {
-  typescript: 'tree-sitter-typescript.wasm',
-  tsx: 'tree-sitter-tsx.wasm',
-  javascript: 'tree-sitter-javascript.wasm',
-  jsx: 'tree-sitter-javascript.wasm',
-  python: 'tree-sitter-python.wasm',
-  go: 'tree-sitter-go.wasm',
-  rust: 'tree-sitter-rust.wasm',
-  java: 'tree-sitter-java.wasm',
+const LANG_MAP: Record<string, string> = {
+  typescript: 'TypeScript',
+  tsx: 'Tsx',
+  javascript: 'JavaScript',
+  jsx: 'JavaScript',
+  python: 'python',
+  go: 'go',
+  rust: 'rust',
+  java: 'java',
 };
 
-async function ensureInit(): Promise<typeof Parser> {
-  if (TreeSitter && initialized) return TreeSitter;
-
-  const mod = await import('web-tree-sitter');
-  TreeSitter = mod.default;
-  await TreeSitter.init();
-  initialized = true;
-  return TreeSitter;
-}
-
-function getWasmDir(): string {
-  try {
-    const thisFile = fileURLToPath(import.meta.url);
-    return join(dirname(thisFile), '..', '..', 'wasm');
-  } catch {
-    return join(process.cwd(), 'wasm');
-  }
-}
-
-async function loadLanguage(lang: string): Promise<Parser.Language> {
-  const cached = languageCache.get(lang);
-  if (cached) return cached;
-
-  const TS = await ensureInit();
-  const grammarFile = GRAMMAR_FILES[lang];
-  if (!grammarFile) {
+export function parseSource(lang: SupportedLanguage, source: string): SgRoot {
+  const langId = LANG_MAP[lang];
+  if (!langId) {
     throw new Error(`No grammar available for language: ${lang}`);
   }
-
-  const wasmPath = join(getWasmDir(), grammarFile);
-  logger.debug(`Loading grammar: ${wasmPath}`);
-
-  const language = await TS.Language.load(wasmPath);
-  languageCache.set(lang, language);
-  return language;
-}
-
-export async function getParser(lang: SupportedLanguage): Promise<Parser> {
-  const key = lang === 'jsx' ? 'javascript' : lang;
-  const cached = parserPool.get(key);
-  if (cached) return cached;
-
-  const TS = await ensureInit();
-  const parser = new TS();
-  const language = await loadLanguage(key);
-  parser.setLanguage(language);
-  parserPool.set(key, parser);
-  return parser;
-}
-
-export async function parseSource(lang: SupportedLanguage, source: string) {
-  const parser = await getParser(lang);
-  return parser.parse(source);
+  logger.debug(`Parsing with ast-grep: ${langId}`);
+  return parse(langId as any, source);
 }
 
 export function isTreeSitterAvailable(lang: SupportedLanguage): boolean {
-  return lang in GRAMMAR_FILES;
+  return lang in LANG_MAP;
 }
 
 export function clearCache(): void {
-  parserPool.clear();
-  languageCache.clear();
+  // No cache needed — ast-grep NAPI uses native bindings
 }

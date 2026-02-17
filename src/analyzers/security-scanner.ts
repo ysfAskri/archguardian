@@ -2,6 +2,7 @@ import type { AnalysisContext, Finding, ParsedFile } from '../core/types.js';
 import { Severity } from '../core/types.js';
 import { BaseAnalyzer } from './base-analyzer.js';
 import { walk } from '../parsers/ast-utils.js';
+import type { SgNode } from '@ast-grep/napi';
 
 interface SecretPattern {
   name: string;
@@ -111,14 +112,15 @@ export class SecurityScanner extends BaseAnalyzer {
   private checkSqlInjection(file: ParsedFile, changedLines: Set<number>): Finding[] {
     const findings: Finding[] = [];
 
-    walk(file.tree.rootNode, (node) => {
-      if (node.type !== 'template_string') return;
-      const lineNum = node.startPosition.row + 1;
+    walk(file.tree.root(), (node) => {
+      if (node.kind() !== 'template_string') return;
+      const lineNum = node.range().start.line + 1;
       if (!changedLines.has(lineNum)) return;
 
-      const text = node.text;
+      const text = node.text();
       if (!this.looksLikeSql(text)) return;
-      if (node.namedChildCount > 0) {
+      const namedChildren = node.children().filter(c => c.isNamed());
+      if (namedChildren.length > 0) {
         // Has interpolation expressions — potential SQL injection
         findings.push(this.createFinding(
           'security/sql-injection',
@@ -135,18 +137,19 @@ export class SecurityScanner extends BaseAnalyzer {
     });
 
     // Check string concatenation with SQL keywords
-    walk(file.tree.rootNode, (node) => {
-      if (node.type !== 'binary_expression') return;
-      const op = node.childForFieldName('operator');
-      if (op?.text !== '+') return;
+    walk(file.tree.root(), (node) => {
+      if (node.kind() !== 'binary_expression') return;
+      const op = node.field('operator');
+      if (op?.text() !== '+') return;
 
-      const lineNum = node.startPosition.row + 1;
+      const lineNum = node.range().start.line + 1;
       if (!changedLines.has(lineNum)) return;
 
-      const text = node.text;
+      const text = node.text();
       if (this.looksLikeSql(text)) {
-        const hasVariable = node.descendantsOfType('identifier').length > 0;
-        if (hasVariable) {
+        const identifiers: SgNode[] = [];
+        walk(node, (n) => { if (n.kind() === 'identifier') identifiers.push(n); });
+        if (identifiers.length > 0) {
           findings.push(this.createFinding(
             'security/sql-injection',
             file.path,
@@ -167,21 +170,21 @@ export class SecurityScanner extends BaseAnalyzer {
   private checkXss(file: ParsedFile, changedLines: Set<number>): Finding[] {
     const findings: Finding[] = [];
 
-    walk(file.tree.rootNode, (node) => {
-      const lineNum = node.startPosition.row + 1;
+    walk(file.tree.root(), (node) => {
+      const lineNum = node.range().start.line + 1;
       if (!changedLines.has(lineNum)) return;
 
       // Check assignment to innerHTML/outerHTML
-      if (node.type === 'assignment_expression') {
-        const left = node.childForFieldName('left');
-        if (left?.type === 'member_expression') {
-          const prop = left.childForFieldName('property');
-          if (prop && XSS_PROPERTIES.has(prop.text)) {
+      if (node.kind() === 'assignment_expression') {
+        const left = node.field('left');
+        if (left?.kind() === 'member_expression') {
+          const prop = left.field('property');
+          if (prop && XSS_PROPERTIES.has(prop.text())) {
             findings.push(this.createFinding(
               'security/xss',
               file.path,
               lineNum,
-              `XSS risk: direct assignment to ${prop.text}`,
+              `XSS risk: direct assignment to ${prop.text()}`,
               {
                 severity: Severity.Error,
                 suggestion: 'Use textContent or a sanitization library instead',
@@ -192,14 +195,14 @@ export class SecurityScanner extends BaseAnalyzer {
       }
 
       // Check document.write
-      if (node.type === 'call_expression') {
-        const fn = node.childForFieldName('function');
-        if (fn && XSS_FUNCTIONS.has(fn.text)) {
+      if (node.kind() === 'call_expression') {
+        const fn = node.field('function');
+        if (fn && XSS_FUNCTIONS.has(fn.text())) {
           findings.push(this.createFinding(
             'security/xss',
             file.path,
             lineNum,
-            `XSS risk: ${fn.text}() usage`,
+            `XSS risk: ${fn.text()}() usage`,
             {
               severity: Severity.Error,
               suggestion: 'Avoid document.write; use DOM manipulation instead',
@@ -209,9 +212,9 @@ export class SecurityScanner extends BaseAnalyzer {
       }
 
       // Check dangerouslySetInnerHTML in JSX
-      if (node.type === 'jsx_attribute') {
-        const name = node.childForFieldName('name');
-        if (name?.text === DANGEROUS_REACT_PROP) {
+      if (node.kind() === 'jsx_attribute') {
+        const name = node.field('name');
+        if (name?.text() === DANGEROUS_REACT_PROP) {
           findings.push(this.createFinding(
             'security/xss',
             file.path,
@@ -232,21 +235,21 @@ export class SecurityScanner extends BaseAnalyzer {
   private checkEval(file: ParsedFile, changedLines: Set<number>): Finding[] {
     const findings: Finding[] = [];
 
-    walk(file.tree.rootNode, (node) => {
-      if (node.type !== 'call_expression') return;
-      const lineNum = node.startPosition.row + 1;
+    walk(file.tree.root(), (node) => {
+      if (node.kind() !== 'call_expression') return;
+      const lineNum = node.range().start.line + 1;
       if (!changedLines.has(lineNum)) return;
 
-      const fn = node.childForFieldName('function');
-      if (fn?.text === 'eval' || fn?.text === 'Function') {
+      const fn = node.field('function');
+      if (fn?.text() === 'eval' || fn?.text() === 'Function') {
         findings.push(this.createFinding(
           'security/eval',
           file.path,
           lineNum,
-          `Dangerous ${fn.text}() usage detected`,
+          `Dangerous ${fn.text()}() usage detected`,
           {
             severity: Severity.Error,
-            suggestion: `Avoid ${fn.text}(); use safer alternatives`,
+            suggestion: `Avoid ${fn.text()}(); use safer alternatives`,
           },
         ));
       }
@@ -271,12 +274,12 @@ export class SecurityScanner extends BaseAnalyzer {
   private checkUnsafeRegex(file: ParsedFile, changedLines: Set<number>): Finding[] {
     const findings: Finding[] = [];
 
-    walk(file.tree.rootNode, (node) => {
-      if (node.type !== 'regex') return;
-      const lineNum = node.startPosition.row + 1;
+    walk(file.tree.root(), (node) => {
+      if (node.kind() !== 'regex') return;
+      const lineNum = node.range().start.line + 1;
       if (!changedLines.has(lineNum)) return;
 
-      const pattern = node.text;
+      const pattern = node.text();
       if (this.hasReDoSRisk(pattern)) {
         findings.push(this.createFinding(
           'security/unsafe-regex',

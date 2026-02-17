@@ -23,7 +23,7 @@ function makeContext(source: string, filePath = 'test.ts'): AnalysisContext {
   };
 
   // We create a mock ParsedFile - for tests that rely on AST,
-  // we'd need actual tree-sitter. These tests focus on regex-based checks.
+  // we'd need actual ast-grep. These tests focus on regex-based checks.
   const parsedFile: ParsedFile = {
     path: filePath,
     language: 'typescript',
@@ -39,23 +39,23 @@ function makeContext(source: string, filePath = 'test.ts'): AnalysisContext {
   };
 }
 
-// Minimal mock tree for regex-based tests
+// Minimal mock tree (SgRoot) for regex-based tests
 function createMockTree(source: string): any {
-  return {
-    rootNode: {
-      type: 'program',
-      text: source,
-      startPosition: { row: 0, column: 0 },
-      endPosition: { row: source.split('\n').length, column: 0 },
-      childCount: 0,
-      namedChildCount: 0,
-      child: () => null,
-      namedChild: () => null,
-      childForFieldName: () => null,
-      descendantsOfType: () => [],
-      parent: null,
-    },
+  const rootNode: any = {
+    kind: () => 'program',
+    text: () => source,
+    range: () => ({
+      start: { line: 0, column: 0, index: 0 },
+      end: { line: source.split('\n').length, column: 0, index: 0 },
+    }),
+    children: () => [],
+    child: () => null,
+    field: () => null,
+    parent: () => null,
+    isNamed: () => true,
+    isLeaf: () => true,
   };
+  return { root: () => rootNode };
 }
 
 describe('SecurityScanner', () => {

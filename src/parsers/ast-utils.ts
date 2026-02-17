@@ -1,34 +1,34 @@
-import type { SyntaxNode, Tree } from 'web-tree-sitter';
+import type { SgNode, SgRoot } from '@ast-grep/napi';
 
-export function walk(node: SyntaxNode, callback: (node: SyntaxNode) => void): void {
+export function walk(node: SgNode, callback: (node: SgNode) => void): void {
   callback(node);
-  for (let i = 0; i < node.childCount; i++) {
-    walk(node.child(i)!, callback);
+  for (const child of node.children()) {
+    walk(child, callback);
   }
 }
 
-export function findNodes(tree: Tree, types: string[]): SyntaxNode[] {
-  const results: SyntaxNode[] = [];
+export function findNodes(tree: SgRoot, types: string[]): SgNode[] {
+  const results: SgNode[] = [];
   const typeSet = new Set(types);
-  walk(tree.rootNode, (node) => {
-    if (typeSet.has(node.type)) {
+  walk(tree.root(), (node) => {
+    if (typeSet.has(node.kind())) {
       results.push(node);
     }
   });
   return results;
 }
 
-export function findAncestor(node: SyntaxNode, type: string): SyntaxNode | null {
-  let current = node.parent;
+export function findAncestor(node: SgNode, type: string): SgNode | null {
+  let current = node.parent();
   while (current) {
-    if (current.type === type) return current;
-    current = current.parent;
+    if (current.kind() === type) return current;
+    current = current.parent();
   }
   return null;
 }
 
-export function getNodeText(node: SyntaxNode): string {
-  return node.text;
+export function getNodeText(node: SgNode): string {
+  return node.text();
 }
 
 export function getLineContent(source: string, line: number): string {
@@ -36,38 +36,39 @@ export function getLineContent(source: string, line: number): string {
   return lines[line] ?? '';
 }
 
-export function nodeRange(node: SyntaxNode): { startLine: number; startCol: number; endLine: number; endCol: number } {
+export function nodeRange(node: SgNode): { startLine: number; startCol: number; endLine: number; endCol: number } {
+  const range = node.range();
   return {
-    startLine: node.startPosition.row + 1,
-    startCol: node.startPosition.column,
-    endLine: node.endPosition.row + 1,
-    endCol: node.endPosition.column,
+    startLine: range.start.line + 1,
+    startCol: range.start.column,
+    endLine: range.end.line + 1,
+    endCol: range.end.column,
   };
 }
 
-export function collectIdentifiers(node: SyntaxNode): string[] {
+export function collectIdentifiers(node: SgNode): string[] {
   const identifiers: string[] = [];
   walk(node, (n) => {
-    if (n.type === 'identifier' || n.type === 'property_identifier') {
-      identifiers.push(n.text);
+    if (n.kind() === 'identifier' || n.kind() === 'property_identifier') {
+      identifiers.push(n.text());
     }
   });
   return identifiers;
 }
 
-export function collectImports(tree: Tree): Array<{ source: string; specifiers: string[]; node: SyntaxNode }> {
-  const imports: Array<{ source: string; specifiers: string[]; node: SyntaxNode }> = [];
+export function collectImports(tree: SgRoot): Array<{ source: string; specifiers: string[]; node: SgNode }> {
+  const imports: Array<{ source: string; specifiers: string[]; node: SgNode }> = [];
 
-  walk(tree.rootNode, (node) => {
-    if (node.type === 'import_statement') {
-      const sourceNode = node.childForFieldName('source');
-      const source = sourceNode?.text.replace(/['"]/g, '') ?? '';
+  walk(tree.root(), (node) => {
+    if (node.kind() === 'import_statement') {
+      const sourceNode = node.field('source');
+      const source = sourceNode?.text().replace(/['"]/g, '') ?? '';
       const specifiers: string[] = [];
 
       walk(node, (child) => {
-        if (child.type === 'import_specifier' || child.type === 'identifier') {
-          if (child.parent?.type === 'import_clause' || child.parent?.type === 'import_specifier' || child.parent?.type === 'named_imports') {
-            specifiers.push(child.text);
+        if (child.kind() === 'import_specifier' || child.kind() === 'identifier') {
+          if (child.parent()?.kind() === 'import_clause' || child.parent()?.kind() === 'import_specifier' || child.parent()?.kind() === 'named_imports') {
+            specifiers.push(child.text());
           }
         }
       });

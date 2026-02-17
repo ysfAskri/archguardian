@@ -1,4 +1,4 @@
-import type { SyntaxNode, Tree } from 'web-tree-sitter';
+import type { SgNode, SgRoot } from '@ast-grep/napi';
 
 // ── Severity & Exit Codes ──────────────────────────────────────────
 
@@ -49,7 +49,7 @@ export type SupportedLanguage = 'typescript' | 'javascript' | 'tsx' | 'jsx' | 'p
 export interface ParsedFile {
   path: string;
   language: SupportedLanguage;
-  tree: Tree;
+  tree: SgRoot;
   content: string;
 }
 
@@ -112,7 +112,7 @@ export interface Rule {
   description: string;
   severity: Severity;
   analyzer: string;
-  check(node: SyntaxNode, file: ParsedFile): Finding[];
+  check(node: SgNode, file: ParsedFile): Finding[];
 }
 
 // ── Config Types ───────────────────────────────────────────────────

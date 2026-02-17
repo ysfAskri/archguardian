@@ -2,7 +2,7 @@ import type { AnalysisContext, Finding, ParsedFile } from '../core/types.js';
 import { Severity } from '../core/types.js';
 import { BaseAnalyzer } from './base-analyzer.js';
 import { walk, findNodes } from '../parsers/ast-utils.js';
-import type { SyntaxNode } from 'web-tree-sitter';
+import type { SgNode } from '@ast-grep/napi';
 
 export class AiSmellDetector extends BaseAnalyzer {
   name = 'ai-smells';
@@ -77,32 +77,32 @@ export class AiSmellDetector extends BaseAnalyzer {
 
   private checkUnusedImports(file: ParsedFile, changedLines: Set<number>): Finding[] {
     const findings: Finding[] = [];
-    const root = file.tree.rootNode;
+    const root = file.tree.root();
 
     // Collect all import specifiers
-    const imports: Array<{ name: string; line: number; node: SyntaxNode }> = [];
+    const imports: Array<{ name: string; line: number; node: SgNode }> = [];
 
     walk(root, (node) => {
-      if (node.type === 'import_statement') {
-        const lineNum = node.startPosition.row + 1;
+      if (node.kind() === 'import_statement') {
+        const lineNum = node.range().start.line + 1;
         // Only check imports in changed lines
         if (!changedLines.has(lineNum)) return;
 
         walk(node, (child) => {
-          if (child.type === 'import_specifier') {
+          if (child.kind() === 'import_specifier') {
             // For aliased imports like `import { parse as parseYaml }`,
             // the local name (alias) is what matters for usage tracking.
-            const alias = child.childForFieldName('alias');
-            const name = alias ?? child.childForFieldName('name');
-            if (name && name.type === 'identifier') {
-              imports.push({ name: name.text, line: lineNum, node: name });
+            const alias = child.field('alias');
+            const name = alias ?? child.field('name');
+            if (name && name.kind() === 'identifier') {
+              imports.push({ name: name.text(), line: lineNum, node: name });
             }
           } else if (
-            child.type === 'identifier' &&
-            (child.parent?.type === 'import_clause' ||
-             child.parent?.type === 'namespace_import')
+            child.kind() === 'identifier' &&
+            (child.parent()?.kind() === 'import_clause' ||
+             child.parent()?.kind() === 'namespace_import')
           ) {
-            imports.push({ name: child.text, line: lineNum, node: child });
+            imports.push({ name: child.text(), line: lineNum, node: child });
           }
         });
       }
@@ -113,19 +113,19 @@ export class AiSmellDetector extends BaseAnalyzer {
     // Collect all identifier references outside of imports
     const usedIdentifiers = new Set<string>();
     walk(root, (node) => {
-      if (node.type === 'identifier' || node.type === 'type_identifier') {
+      if (node.kind() === 'identifier' || node.kind() === 'type_identifier' || node.kind() === 'shorthand_property_identifier') {
         // Skip if it's part of an import
-        let parent = node.parent;
+        let parent = node.parent();
         let isImport = false;
         while (parent) {
-          if (parent.type === 'import_statement') {
+          if (parent.kind() === 'import_statement') {
             isImport = true;
             break;
           }
-          parent = parent.parent;
+          parent = parent.parent();
         }
         if (!isImport) {
-          usedIdentifiers.add(node.text);
+          usedIdentifiers.add(node.text());
         }
       }
     });
@@ -154,25 +154,25 @@ export class AiSmellDetector extends BaseAnalyzer {
     const tryCatches = findNodes(file.tree, ['try_statement']);
 
     for (const tryNode of tryCatches) {
-      const lineNum = tryNode.startPosition.row + 1;
+      const lineNum = tryNode.range().start.line + 1;
       if (!changedLines.has(lineNum)) continue;
 
-      const tryBody = tryNode.childForFieldName('body');
-      const handler = tryNode.childForFieldName('handler');
+      const tryBody = tryNode.field('body');
+      const handler = tryNode.field('handler');
 
       if (!tryBody || !handler) continue;
 
-      const catchBody = handler.childForFieldName('body');
+      const catchBody = handler.field('body');
       if (!catchBody) continue;
 
-      const tryLines = tryBody.endPosition.row - tryBody.startPosition.row;
-      const catchLines = catchBody.endPosition.row - catchBody.startPosition.row;
+      const tryLines = tryBody.range().end.line - tryBody.range().start.line;
+      const catchLines = catchBody.range().end.line - catchBody.range().start.line;
 
       if (catchLines > tryLines * 3 && catchLines > 15) {
         findings.push(this.createFinding(
           'ai-smell/verbose-error-handling',
           file.path,
-          handler.startPosition.row + 1,
+          handler.range().start.line + 1,
           `Catch block (${catchLines} lines) is ${(catchLines / tryLines).toFixed(1)}x larger than try block (${tryLines} lines)`,
           {
             suggestion: 'AI-generated error handling is often overly verbose. Consider simplifying or extracting error handling.',
@@ -187,14 +187,14 @@ export class AiSmellDetector extends BaseAnalyzer {
   private checkUnnecessaryTypeAssertions(file: ParsedFile, changedLines: Set<number>): Finding[] {
     const findings: Finding[] = [];
 
-    walk(file.tree.rootNode, (node) => {
+    walk(file.tree.root(), (node) => {
       // `as any` or `as unknown`
-      if (node.type === 'as_expression') {
-        const lineNum = node.startPosition.row + 1;
+      if (node.kind() === 'as_expression') {
+        const lineNum = node.range().start.line + 1;
         if (!changedLines.has(lineNum)) return;
 
-        const typeNode = node.childForFieldName('type');
-        if (typeNode?.text === 'any') {
+        const typeNode = node.field('type');
+        if (typeNode?.text() === 'any') {
           findings.push(this.createFinding(
             'ai-smell/unnecessary-type-assertion',
             file.path,
@@ -208,18 +208,18 @@ export class AiSmellDetector extends BaseAnalyzer {
       }
 
       // Non-null assertions (!)
-      if (node.type === 'non_null_expression') {
-        const lineNum = node.startPosition.row + 1;
+      if (node.kind() === 'non_null_expression') {
+        const lineNum = node.range().start.line + 1;
         if (!changedLines.has(lineNum)) return;
 
         // Count non-null assertions in changed lines for this file
         // Only flag if there are many in close proximity
         const nearby = findNodes(file.tree, ['non_null_expression']).filter(n => {
-          const l = n.startPosition.row + 1;
+          const l = n.range().start.line + 1;
           return changedLines.has(l) && Math.abs(l - lineNum) < 10;
         });
 
-        if (nearby.length >= 3 && nearby[0] === node) {
+        if (nearby.length >= 3 && nearby[0].range().start.line === node.range().start.line && nearby[0].range().start.column === node.range().start.column) {
           findings.push(this.createFinding(
             'ai-smell/excessive-non-null-assertions',
             file.path,

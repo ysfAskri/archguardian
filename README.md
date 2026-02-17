@@ -2,21 +2,28 @@
   <img src=".github/banner.png" alt="archguardian" width="700">
 </p>
 
+<h3 align="center">The code quality guardrail for AI-assisted development</h3>
+
 <p align="center">
   <a href="https://www.npmjs.com/package/archguardian"><img src="https://img.shields.io/npm/v/archguardian?style=flat-square&color=6366f1&label=npm" alt="npm"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="license"></a>
   <a href="https://nodejs.org"><img src="https://img.shields.io/badge/node-%E2%89%A518-339933?style=flat-square" alt="node"></a>
+  <img src="https://img.shields.io/badge/languages-8-blueviolet?style=flat-square" alt="languages">
+  <img src="https://img.shields.io/badge/rules-18-orange?style=flat-square" alt="rules">
+</p>
+
+<p align="center">
+  Cursor, Copilot, Claude Code &mdash; they write code 10x faster.<br>
+  <strong>archguardian</strong> makes sure that code doesn't wreck your codebase.
 </p>
 
 ---
 
-**archguardian** is a pre-commit hook and CLI that catches security issues, AI-generated code smells, naming convention violations, code duplication, and architecture layer breaches — before they reach your repo. Works with TypeScript, JavaScript, Python, Go, Rust, and Java.
-
 ```bash
-npx archguardian init    # adds config + git hook
-npx archguardian scan    # scans full project
-npx archguardian fix     # auto-fix simple findings
-git commit               # hook runs automatically
+npx archguardian init    # adds config + git hook — one command, done
+npx archguardian scan    # full project scan
+npx archguardian fix     # auto-fix findings
+git commit               # hook blocks bad code automatically
 ```
 
 <br>
@@ -27,28 +34,42 @@ git commit               # hook runs automatically
 
 <br>
 
-## Why
+## The problem
 
-AI coding tools generate code fast but introduce patterns that compound into debt:
+You're shipping faster than ever with AI coding tools. But speed without guardrails is how you end up with:
 
-- **Hardcoded secrets** that slip through review
-- **Excessive comments** that restate what the code already says
-- **Unused imports** from autocomplete suggestions that were never cleaned up
-- **`as any` casts** and non-null assertions used to silence the type checker
-- **SQL injection and XSS vectors** in generated snippets
-- **Inconsistent naming** across files written by different tools
+- **Hardcoded API keys** that Copilot autocompleted from training data
+- **Unused imports** that Cursor added and never cleaned up
+- **`as any` everywhere** because the AI couldn't figure out the types
+- **Copy-paste blocks** generated 5 times with slightly different variable names
+- **Architecture violations** where the AI imported the database layer directly from UI components
+- **Inconsistent naming** across files — `camelCase` here, `snake_case` there, `PascalCase` somewhere else
 
-archguardian runs in <1 second on typical diffs. It uses [tree-sitter](https://tree-sitter.github.io/) WASM for real AST parsing — not regex.
+Code review catches some of it. But at 3 PRs a day with 500+ lines of AI-generated code each, reviewers are overwhelmed.
 
-## What it checks
+**archguardian catches all of it, automatically, before the commit even happens.**
+
+## How it works
+
+<p align="center">
+  <img src=".github/how-it-works.svg" alt="How archguardian works" width="520">
+</p>
+
+1. You commit code (written by you, Copilot, Cursor, Claude, or any AI tool)
+2. archguardian's pre-commit hook kicks in — analyzes **only changed lines**
+3. Real AST parsing via [ast-grep](https://ast-grep.github.io/) (native tree-sitter bindings) — not regex hacks
+4. 18 built-in rules across 5 analyzers run in parallel in under 1 second
+5. Bad code gets blocked with clear, actionable messages. Clean code passes instantly.
+
+## What it catches
 
 <table>
 <tr>
 <td valign="top" width="33%">
 
 **Security**
-- Hardcoded secrets (11 patterns: AWS, GitHub, Slack, Stripe, Google, JWTs, DB URLs)
-- SQL injection via template literals and string concat
+- Hardcoded secrets (AWS, GitHub, Slack, Stripe, Google, JWTs, DB URLs &mdash; 11 patterns)
+- SQL injection via template literals
 - XSS: `innerHTML`, `dangerouslySetInnerHTML`, `document.write`
 - `eval()` / `Function()` usage
 - ReDoS-prone regex
@@ -57,9 +78,9 @@ archguardian runs in <1 second on typical diffs. It uses [tree-sitter](https://t
 </td>
 <td valign="top" width="33%">
 
-**AI smells**
-- Comment-to-code ratio above threshold
-- Unused imports (AST-verified)
+**AI code smells**
+- Excessive comment-to-code ratio
+- Unused imports (AST-verified, not regex)
 - Catch blocks larger than try blocks
 - Duplicate code blocks in the same diff
 - `as any` type assertions
@@ -81,9 +102,9 @@ archguardian runs in <1 second on typical diffs. It uses [tree-sitter](https://t
 <td valign="top" width="33%">
 
 **Duplicates**
-- AST structural hashing (ignores identifiers/literals)
+- AST structural hashing (ignores variable names and literals)
 - Jaccard token similarity (configurable threshold)
-- Fingerprint cache for incremental scans
+- Catches the "AI generated 5 similar functions" pattern
 
 </td>
 <td valign="top" width="33%">
@@ -91,7 +112,7 @@ archguardian runs in <1 second on typical diffs. It uses [tree-sitter](https://t
 **Architecture**
 - Define layers (UI, Service, Repository, Domain)
 - Enforce allowed/denied import directions
-- Catch boundary violations at commit time
+- Catches boundary violations at commit time
 
 </td>
 <td valign="top" width="33%">
@@ -99,23 +120,30 @@ archguardian runs in <1 second on typical diffs. It uses [tree-sitter](https://t
 **Auto-fix**
 - Remove unused imports automatically
 - Rename identifiers to match conventions
-- `--dry-run` to preview changes first
+- `--dry-run` to preview before applying
 
 </td>
 </tr>
 </table>
 
-## Languages
+## Works with your stack
 
-TypeScript, JavaScript, TSX, JSX, Python, Go, Rust, Java — powered by [tree-sitter](https://tree-sitter.github.io/) WASM grammars.
+TypeScript, JavaScript, TSX, JSX, Python, Go, Rust, Java &mdash; powered by [ast-grep](https://ast-grep.github.io/) native tree-sitter bindings. Real AST parsing, not regex pattern matching.
 
-## Configuration
+## Quick start
 
-`archguardian init` creates `.archguard.yml` in your project root:
+```bash
+# Install and initialize in your project
+npx archguardian init
+```
+
+That's it. archguardian creates `.archguard.yml` and installs a git pre-commit hook. Every commit is now guarded.
+
+### Configuration
 
 ```yaml
 version: 1
-languages: [typescript, javascript, tsx, jsx, python, go, rust, java]
+languages: [typescript, javascript, python, go, rust, java]
 include: ["src/**"]
 exclude: ["**/*.test.ts", "**/node_modules/**"]
 
@@ -152,71 +180,52 @@ analyzers:
     rules:
       - from: ui
         deny: [repository]
-
-llm:
-  enabled: false
-  provider: openai     # openai | anthropic | gemini
-  model: gpt-4o-mini
 ```
 
-## Inline Suppression
+## Adopting on an existing codebase
 
-Silence false positives without excluding entire files:
-
-```js
-// archguard-ignore
-doSomething();                          // suppress all rules on next line
-
-// archguard-ignore security/xss
-el.innerHTML = safe;                    // suppress specific rule on next line
-
-doSomething(); // archguard-ignore-line // suppress all rules on same line
-
-el.innerHTML = safe; // archguard-ignore-line security/xss // specific rule, same line
-```
-
-Python uses `#` instead of `//`. Block comments `/* archguard-ignore */` also work.
-
-## Baseline Mode
-
-Adopt archguardian on an existing project without drowning in warnings:
+Don't want 500 warnings on day one? Use baseline mode:
 
 ```bash
-archguardian scan --update-baseline      # save current findings to .archguard-baseline.json
-archguardian scan                         # auto-loads baseline, only shows NEW findings
-archguardian scan --baseline custom.json  # use a custom baseline path
+archguardian scan --update-baseline      # snapshot current state
+archguardian scan                         # only shows NEW findings from now on
 ```
 
-Findings are matched by `ruleId + file + message` (not line number), so baseline entries survive line-number drift when code is edited.
+Findings are matched by `ruleId + file + message` (not line number), so baseline entries survive code edits.
 
-## CLI
+## Inline suppression
+
+Silence false positives without disabling rules globally:
+
+```js
+// archguard-ignore security/xss
+el.innerHTML = sanitized;                   // suppress specific rule
+
+doSomething(); // archguard-ignore-line     // suppress all rules on this line
+```
+
+Works with `//`, `#`, and `/* */` comment styles.
+
+## CLI reference
 
 ```
-archguardian init                                 Create .archguard.yml + install git hook
-archguardian check [--format] [--update-baseline] Analyze staged changes (pre-commit mode)
+archguardian init                                 Create config + install git hook
+archguardian check [--format] [--update-baseline] Analyze staged changes (pre-commit)
 archguardian scan  [--format] [--update-baseline] Analyze full project
-archguardian fix   [--dry-run]                    Auto-fix simple findings
-archguardian learn [--apply]                      Infer conventions from codebase
+archguardian fix   [--dry-run]                    Auto-fix findings
+archguardian learn [--apply]                      Infer conventions from your codebase
 archguardian rules [--json]                       List all 18 built-in rules
-archguardian metrics [--json]                     Show findings trend over time
-archguardian dashboard [--port]                   Open web dashboard on localhost
+archguardian metrics [--json]                     Findings trend over time
+archguardian dashboard [--port]                   Web dashboard on localhost
 ```
 
-Formats: `terminal` (default), `json`, `sarif` &mdash; Exit codes: `0` pass, `1` errors, `2` warnings exceeded, `3` config error, `5` timeout.
+Output formats: `terminal` (default), `json`, `sarif`
 
-## LLM suggestions
+Exit codes: `0` pass, `1` errors found, `2` warnings exceeded threshold, `3` config error
 
-Enable optional AI-powered fix suggestions. Supports OpenAI, Anthropic, and Gemini:
+## CI/CD
 
-```yaml
-llm:
-  enabled: true
-  provider: anthropic   # openai | anthropic | gemini
-```
-
-Set your API key via environment variable (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY`) or in config. Suggestions are cached locally to avoid repeated calls.
-
-## GitHub Action
+### GitHub Action
 
 ```yaml
 - uses: ysfAskri/archguardian@v1
@@ -224,34 +233,46 @@ Set your API key via environment variable (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`
     format: sarif        # uploads to GitHub Security tab
 ```
 
+### Any CI
+
+```bash
+npx archguardian scan --format sarif > results.sarif
+```
+
+## LLM-powered suggestions
+
+Get AI-powered fix suggestions for findings. Supports OpenAI, Anthropic, and Gemini:
+
+```yaml
+llm:
+  enabled: true
+  provider: anthropic   # openai | anthropic | gemini
+```
+
+Set your API key via `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or `GEMINI_API_KEY`. Responses are cached locally to avoid repeated API calls.
+
 ## Plugins
 
-Create custom analyzers as npm packages:
+Extend with custom analyzers:
 
 ```yaml
 plugins:
   - archguardian-plugin-my-rules
 ```
 
-Each plugin exports an analyzer class that extends the base analyzer interface. See [plugin docs](docs/) for details.
+Each plugin exports an analyzer class. See [plugin docs](docs/) for details.
 
-## How it works
+## Comparison
 
-<p align="center">
-  <img src=".github/how-it-works.svg" alt="How archguardian works" width="520">
-</p>
-
-Only **changed lines** are checked in pre-commit mode — no noise from existing code.
-
-## Roadmap
-
-| Version | Status | What's included |
-|:--------|:-------|:----------------|
-| **v0.1.0** | Shipped | Security scanner, AI smell detector, convention enforcer, CLI, git hooks |
-| **v0.2.0** | Shipped | Duplicate detection, layer violations, Python support, `learn`, `rules`, JSON output, metrics |
-| **v0.3.0** | Shipped | Plugin system, SARIF output, GitHub Action, CI pipeline |
-| **v1.0.0** | Shipped | VS Code extension, auto-fix, LLM suggestions, Go/Rust/Java support, dashboard |
-| **v1.1.0** | Shipped | Inline suppression comments, baseline mode for incremental adoption |
+| | archguardian | ESLint | SonarQube |
+|:---|:---:|:---:|:---:|
+| AI-specific code smells | Yes | No | No |
+| Architecture layer enforcement | Yes | No | Partial |
+| Duplicate detection (AST-based) | Yes | No | Yes |
+| Pre-commit hook (zero config) | Yes | Manual | No |
+| Runs in < 1 second | Yes | Depends | No |
+| 8 languages, one tool | Yes | JS/TS only | Yes |
+| Free & open source | Yes | Yes | Paid |
 
 ## Contributing
 
@@ -267,13 +288,13 @@ npm run build      # builds to dist/
 
 ```
 src/
-├── cli/          Commander.js entry + 10 commands + output formatters (terminal, JSON, SARIF)
+├── cli/          Commander.js entry + 8 commands + output formatters (terminal, JSON, SARIF)
 ├── core/         Pipeline, config loader, diff parser, suppression, baseline, types
-├── parsers/      Tree-sitter WASM manager (TS/JS/Python/Go/Rust/Java) + AST utilities
+├── parsers/      ast-grep NAPI parser (TS/JS/Python/Go/Rust/Java) + AST utilities
 ├── analyzers/    Security, AI smells, conventions, duplicates, layer violations
 ├── plugins/      Dynamic plugin loader for external analyzers
 ├── llm/          LLM client (OpenAI, Anthropic, Gemini), prompt builder, file-based cache
-├── fixes/        Auto-fix engine (remove unused imports, rename conventions)
+├── fixers/       Auto-fix engine (remove unused imports, rename conventions)
 ├── metrics/      Run history tracker (.archguard/metrics.json)
 ├── hooks/        Git hook installer (direct + Husky)
 └── utils/        Git operations, logging, perf timing

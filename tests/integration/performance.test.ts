@@ -38,23 +38,23 @@ function generateFile(index: number): { fileInfo: FileInfo; content: string } {
   };
 }
 
-// Mock tree for perf test (no actual tree-sitter needed)
+// Mock tree (SgRoot) for perf test (no actual ast-grep needed)
 function mockTree(content: string): any {
-  return {
-    rootNode: {
-      type: 'program',
-      text: content,
-      startPosition: { row: 0, column: 0 },
-      endPosition: { row: content.split('\n').length, column: 0 },
-      childCount: 0,
-      namedChildCount: 0,
-      child: () => null,
-      namedChild: () => null,
-      childForFieldName: () => null,
-      descendantsOfType: () => [],
-      parent: null,
-    },
+  const rootNode: any = {
+    kind: () => 'program',
+    text: () => content,
+    range: () => ({
+      start: { line: 0, column: 0, index: 0 },
+      end: { line: content.split('\n').length, column: 0, index: 0 },
+    }),
+    children: () => [],
+    child: () => null,
+    field: () => null,
+    parent: () => null,
+    isNamed: () => true,
+    isLeaf: () => true,
   };
+  return { root: () => rootNode };
 }
 
 describe('Performance', () => {

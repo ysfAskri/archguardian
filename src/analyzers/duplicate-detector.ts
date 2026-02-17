@@ -2,7 +2,7 @@ import type { AnalysisContext, Finding, ParsedFile } from '../core/types.js';
 import { Severity } from '../core/types.js';
 import { BaseAnalyzer } from './base-analyzer.js';
 import { walk, findNodes } from '../parsers/ast-utils.js';
-import type { SyntaxNode } from 'web-tree-sitter';
+import type { SgNode } from '@ast-grep/napi';
 
 /**
  * Minimum number of lines a block must span to be considered for duplicate detection.
@@ -183,8 +183,8 @@ export class DuplicateDetector extends BaseAnalyzer {
     const nodes = findNodes(file.tree, BLOCK_NODE_TYPES);
 
     for (const node of nodes) {
-      const startLine = node.startPosition.row + 1;
-      const endLine = node.endPosition.row + 1;
+      const startLine = node.range().start.line + 1;
+      const endLine = node.range().end.line + 1;
       const lineCount = endLine - startLine + 1;
 
       // Filter out trivially small blocks.
@@ -195,7 +195,7 @@ export class DuplicateDetector extends BaseAnalyzer {
 
       const hash = this.hashNode(node);
       const tokens = this.tokenizeNode(node);
-      const snippet = node.text;
+      const snippet = node.text();
 
       blocks.push({
         hash,
@@ -204,7 +204,7 @@ export class DuplicateDetector extends BaseAnalyzer {
         startLine,
         endLine,
         snippet,
-        nodeType: node.type,
+        nodeType: node.kind() as string,
       });
     }
 
@@ -229,7 +229,7 @@ export class DuplicateDetector extends BaseAnalyzer {
    * replacing all identifiers with `$ID` and all literals with `$LIT`,
    * then return a simple hash of the result.
    */
-  private hashNode(node: SyntaxNode): string {
+  private hashNode(node: SgNode): string {
     const normalized = this.normalizeNode(node);
     return this.simpleHash(normalized);
   }
@@ -240,28 +240,27 @@ export class DuplicateDetector extends BaseAnalyzer {
    *   - Literals    -> `$LIT`
    *   - Everything else keeps its node type and structure.
    */
-  private normalizeNode(node: SyntaxNode): string {
-    if (IDENTIFIER_NODE_TYPES.has(node.type)) {
+  private normalizeNode(node: SgNode): string {
+    const kind = node.kind() as string;
+    if (IDENTIFIER_NODE_TYPES.has(kind)) {
       return '$ID';
     }
-    if (LITERAL_NODE_TYPES.has(node.type)) {
+    if (LITERAL_NODE_TYPES.has(kind)) {
       return '$LIT';
     }
 
-    if (node.childCount === 0) {
+    const children = node.children();
+    if (children.length === 0) {
       // Leaf node that is not an identifier or literal — keep its text
       // (e.g. operators, keywords, punctuation).
-      return node.text;
+      return node.text();
     }
 
     const childParts: string[] = [];
-    for (let i = 0; i < node.childCount; i++) {
-      const child = node.child(i);
-      if (child) {
-        childParts.push(this.normalizeNode(child));
-      }
+    for (const child of children) {
+      childParts.push(this.normalizeNode(child));
     }
-    return `(${node.type} ${childParts.join(' ')})`;
+    return `(${kind} ${childParts.join(' ')})`;
   }
 
   /**
@@ -284,19 +283,20 @@ export class DuplicateDetector extends BaseAnalyzer {
    * for identifiers and literals. This sequence is used for Jaccard
    * similarity comparison.
    */
-  private tokenizeNode(node: SyntaxNode): string[] {
+  private tokenizeNode(node: SgNode): string[] {
     const tokens: string[] = [];
 
     walk(node, (n) => {
-      if (IDENTIFIER_NODE_TYPES.has(n.type)) {
+      const kind = n.kind() as string;
+      if (IDENTIFIER_NODE_TYPES.has(kind)) {
         tokens.push('$ID');
-      } else if (LITERAL_NODE_TYPES.has(n.type)) {
+      } else if (LITERAL_NODE_TYPES.has(kind)) {
         tokens.push('$LIT');
-      } else if (n.childCount === 0) {
+      } else if (n.children().length === 0) {
         // Leaf: operator, keyword, punctuation
-        tokens.push(n.text);
+        tokens.push(n.text());
       } else {
-        tokens.push(n.type);
+        tokens.push(kind);
       }
     });
 

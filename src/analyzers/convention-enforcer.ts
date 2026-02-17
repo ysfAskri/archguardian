@@ -58,24 +58,24 @@ export class ConventionEnforcer extends BaseAnalyzer {
   private checkFunctionNaming(file: ParsedFile, changedLines: Set<number>, convention: NamingConvention): Finding[] {
     const findings: Finding[] = [];
 
-    walk(file.tree.rootNode, (node) => {
+    walk(file.tree.root(), (node) => {
       let nameNode = null;
 
-      if (node.type === 'function_declaration' || node.type === 'method_definition') {
-        nameNode = node.childForFieldName('name');
-      } else if (node.type === 'variable_declarator') {
+      if (node.kind() === 'function_declaration' || node.kind() === 'method_definition') {
+        nameNode = node.field('name');
+      } else if (node.kind() === 'variable_declarator') {
         // Arrow functions: const foo = () => {}
-        const init = node.childForFieldName('value');
-        if (init?.type === 'arrow_function' || init?.type === 'function') {
-          nameNode = node.childForFieldName('name');
+        const init = node.field('value');
+        if (init?.kind() === 'arrow_function' || init?.kind() === 'function') {
+          nameNode = node.field('name');
         }
       }
 
       if (!nameNode) return;
-      const lineNum = nameNode.startPosition.row + 1;
+      const lineNum = nameNode.range().start.line + 1;
       if (!changedLines.has(lineNum)) return;
 
-      const name = nameNode.text;
+      const name = nameNode.text();
       if (IGNORED_NAMES.has(name)) return;
       if (name.startsWith('_')) return; // Private convention
 
@@ -83,8 +83,8 @@ export class ConventionEnforcer extends BaseAnalyzer {
       if (/\.[jt]sx$/.test(file.path) && /^[A-Z]/.test(name)) return;
 
       // Skip constructors, getters, setters
-      if (name === 'constructor' || node.type === 'method_definition') {
-        const kindNode = node.children.find(c => c.type === 'get' || c.type === 'set');
+      if (name === 'constructor' || node.kind() === 'method_definition') {
+        const kindNode = node.children().find(c => c.kind() === 'get' || c.kind() === 'set');
         if (kindNode) return;
         if (name === 'constructor') return;
       }
@@ -106,15 +106,15 @@ export class ConventionEnforcer extends BaseAnalyzer {
   private checkClassNaming(file: ParsedFile, changedLines: Set<number>, convention: NamingConvention): Finding[] {
     const findings: Finding[] = [];
 
-    walk(file.tree.rootNode, (node) => {
-      if (node.type !== 'class_declaration' && node.type !== 'interface_declaration' && node.type !== 'type_alias_declaration') return;
+    walk(file.tree.root(), (node) => {
+      if (node.kind() !== 'class_declaration' && node.kind() !== 'interface_declaration' && node.kind() !== 'type_alias_declaration') return;
 
-      const nameNode = node.childForFieldName('name');
+      const nameNode = node.field('name');
       if (!nameNode) return;
-      const lineNum = nameNode.startPosition.row + 1;
+      const lineNum = nameNode.range().start.line + 1;
       if (!changedLines.has(lineNum)) return;
 
-      const name = nameNode.text;
+      const name = nameNode.text();
       if (IGNORED_NAMES.has(name)) return;
 
       if (!matchesConvention(name, convention)) {
@@ -134,36 +134,36 @@ export class ConventionEnforcer extends BaseAnalyzer {
   private checkConstantNaming(file: ParsedFile, changedLines: Set<number>, convention: NamingConvention): Finding[] {
     const findings: Finding[] = [];
 
-    walk(file.tree.rootNode, (node) => {
+    walk(file.tree.root(), (node) => {
       // Only top-level const declarations
-      if (node.type !== 'lexical_declaration') return;
-      const kind = node.children.find(c => c.text === 'const');
+      if (node.kind() !== 'lexical_declaration') return;
+      const kind = node.children().find(c => c.text() === 'const');
       if (!kind) return;
 
       // Must be at module level (program or export)
-      const parent = node.parent;
-      if (parent?.type !== 'program' && parent?.type !== 'export_statement') return;
+      const parent = node.parent();
+      if (parent?.kind() !== 'program' && parent?.kind() !== 'export_statement') return;
 
-      for (let i = 0; i < node.namedChildCount; i++) {
-        const declarator = node.namedChild(i);
-        if (declarator?.type !== 'variable_declarator') continue;
+      const namedChildren = node.children().filter(c => c.isNamed());
+      for (const declarator of namedChildren) {
+        if (declarator?.kind() !== 'variable_declarator') continue;
 
-        const nameNode = declarator.childForFieldName('name');
-        if (!nameNode || nameNode.type !== 'identifier') continue;
+        const nameNode = declarator.field('name');
+        if (!nameNode || nameNode.kind() !== 'identifier') continue;
 
-        const lineNum = nameNode.startPosition.row + 1;
+        const lineNum = nameNode.range().start.line + 1;
         if (!changedLines.has(lineNum)) continue;
 
-        const name = nameNode.text;
+        const name = nameNode.text();
         if (IGNORED_NAMES.has(name)) continue;
 
         // Only enforce UPPER_SNAKE on primitive constants (string, number, boolean literals)
-        const value = declarator.childForFieldName('value');
+        const value = declarator.field('value');
         const isPrimitive = value && (
-          value.type === 'string' ||
-          value.type === 'number' ||
-          value.type === 'true' ||
-          value.type === 'false'
+          value.kind() === 'string' ||
+          value.kind() === 'number' ||
+          value.kind() === 'true' ||
+          value.kind() === 'false'
         );
 
         if (!isPrimitive) continue;

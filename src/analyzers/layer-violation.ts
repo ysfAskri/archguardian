@@ -38,7 +38,7 @@ export class LayerViolationDetector extends BaseAnalyzer {
       const imports = collectImports(file.tree);
 
       for (const imp of imports) {
-        const importLine = imp.node.startPosition.row + 1;
+        const importLine = imp.node.range().start.line + 1;
         if (!changedLines.has(importLine)) continue;
 
         const resolvedPath = this.resolveImportPath(file.path, imp.source);
@@ -58,7 +58,7 @@ export class LayerViolationDetector extends BaseAnalyzer {
               {
                 severity: archConfig.severity ?? this.defaultSeverity(),
                 suggestion: `Refactor to avoid importing from the '${targetLayer.name}' layer. Allowed layers: ${(rule.allow ?? []).join(', ') || 'none'}`,
-                codeSnippet: imp.node.text,
+                codeSnippet: imp.node.text(),
               },
             ),
           );

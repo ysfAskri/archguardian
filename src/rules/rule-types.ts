@@ -1,5 +1,5 @@
 import type { Finding, ParsedFile, Severity } from '../core/types.js';
-import type { SyntaxNode } from 'web-tree-sitter';
+import type { SgNode } from '@ast-grep/napi';
 
 export interface RuleDefinition {
   id: string;
@@ -11,7 +11,7 @@ export interface RuleDefinition {
 
 export interface NodeRule extends RuleDefinition {
   nodeTypes: string[];
-  check(node: SyntaxNode, file: ParsedFile): Finding[];
+  check(node: SgNode, file: ParsedFile): Finding[];
 }
 
 export interface FileRule extends RuleDefinition {

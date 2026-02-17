@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join, basename } from 'node:path';
 import chalk from 'chalk';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
-import type { Tree } from 'web-tree-sitter';
+import type { SgRoot } from '@ast-grep/napi';
 import { ExitCode } from '../../core/types.js';
 import type { NamingConvention, SupportedLanguage } from '../../core/types.js';
 import { isGitRepo, getGitRoot, getAllTrackedFiles } from '../../utils/git.js';
@@ -105,68 +105,67 @@ interface ExtractedNames {
   constants: string[];
 }
 
-function extractNames(tree: Tree): ExtractedNames {
+function extractNames(tree: SgRoot): ExtractedNames {
   const functions: string[] = [];
   const classes: string[] = [];
   const constants: string[] = [];
 
-  walk(tree.rootNode, (node) => {
+  walk(tree.root(), (node) => {
     // Function declarations: function foo() {}
-    if (node.type === 'function_declaration') {
-      const nameNode = node.childForFieldName('name');
+    if (node.kind() === 'function_declaration') {
+      const nameNode = node.field('name');
       if (nameNode) {
-        functions.push(nameNode.text);
+        functions.push(nameNode.text());
       }
     }
 
     // Method definitions inside classes: method() {}
-    if (node.type === 'method_definition') {
-      const nameNode = node.childForFieldName('name');
-      if (nameNode && nameNode.text !== 'constructor') {
-        functions.push(nameNode.text);
+    if (node.kind() === 'method_definition') {
+      const nameNode = node.field('name');
+      if (nameNode && nameNode.text() !== 'constructor') {
+        functions.push(nameNode.text());
       }
     }
 
     // Arrow functions assigned to variables: const foo = () => {}
     // Also handles: const foo = function() {}
-    if (node.type === 'variable_declarator') {
-      const nameNode = node.childForFieldName('name');
-      const valueNode = node.childForFieldName('value');
+    if (node.kind() === 'variable_declarator') {
+      const nameNode = node.field('name');
+      const valueNode = node.field('value');
       if (nameNode && valueNode) {
-        const valType = valueNode.type;
+        const valType = valueNode.kind();
         if (valType === 'arrow_function' || valType === 'function' || valType === 'function_expression') {
-          functions.push(nameNode.text);
+          functions.push(nameNode.text());
           return; // Don't also classify as constant
         }
       }
     }
 
     // Class declarations: class Foo {}
-    if (node.type === 'class_declaration') {
-      const nameNode = node.childForFieldName('name');
+    if (node.kind() === 'class_declaration') {
+      const nameNode = node.field('name');
       if (nameNode) {
-        classes.push(nameNode.text);
+        classes.push(nameNode.text());
       }
     }
 
     // Constants: const FOO_BAR = ... (non-function values in const declarations)
-    if (node.type === 'lexical_declaration') {
+    if (node.kind() === 'lexical_declaration') {
       const declarationKeyword = node.child(0);
-      if (declarationKeyword && declarationKeyword.text === 'const') {
-        for (let i = 0; i < node.childCount; i++) {
-          const child = node.child(i);
-          if (child && child.type === 'variable_declarator') {
-            const nameNode = child.childForFieldName('name');
-            const valueNode = child.childForFieldName('value');
+      if (declarationKeyword && declarationKeyword.text() === 'const') {
+        for (const child of node.children()) {
+          if (child.kind() === 'variable_declarator') {
+            const nameNode = child.field('name');
+            const valueNode = child.field('value');
             if (nameNode && valueNode) {
-              const valType = valueNode.type;
+              const valType = valueNode.kind();
               // Skip arrow functions and function expressions — those are in functions category
               if (valType === 'arrow_function' || valType === 'function' || valType === 'function_expression') {
                 continue;
               }
               // Only include if it looks like a constant (UPPER_SNAKE) or if we want to collect all
               // We collect all const names so the statistics can determine the convention
-              const name = nameNode.text;
+              const name = nameNode.text();
               // Filter to only collect names that are truly "constant-like":
               // UPPER_SNAKE or single-word uppercase identifiers
               if (isAllUpperAndUnderscores(name)) {
@@ -179,13 +178,12 @@ function extractNames(tree: Tree): ExtractedNames {
     }
 
     // Export default class
-    if (node.type === 'export_statement') {
-      for (let i = 0; i < node.childCount; i++) {
-        const child = node.child(i);
-        if (child && child.type === 'class_declaration') {
-          const nameNode = child.childForFieldName('name');
+    if (node.kind() === 'export_statement') {
+      for (const child of node.children()) {
+        if (child.kind() === 'class_declaration') {
+          const nameNode = child.field('name');
           if (nameNode) {
-            classes.push(nameNode.text);
+            classes.push(nameNode.text());
           }
         }
       }
@@ -388,7 +386,7 @@ export async function learnCommand(options: LearnOptions = {}): Promise<number> 
     // Parse and extract AST names
     try {
       const content = await readFile(join(projectRoot, filePath), 'utf-8');
-      const tree = await parseSource(lang, content);
+      const tree = parseSource(lang, content);
       const names = extractNames(tree);
 
       allFunctions.push(...names.functions);

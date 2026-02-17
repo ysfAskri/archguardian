@@ -30,8 +30,8 @@ function makeArchConfig(overrides: Partial<ArchGuardConfig['analyzers']['archite
 }
 
 /**
- * Create a minimal mock SyntaxNode that supports the `walk` function.
- * `walk` iterates `node.childCount` and calls `node.child(i)!`, so we must
+ * Create a minimal mock SgNode that supports the `walk` function.
+ * `walk` iterates `node.children()` and recurses, so we must
  * make sure every node properly returns its children.
  */
 function mockNode(props: {
@@ -43,21 +43,22 @@ function mockNode(props: {
 }) {
   const children = props.children ?? [];
   const node: any = {
-    type: props.type,
-    text: props.text,
-    startPosition: { row: props.row, column: 0 },
-    endPosition: { row: props.row, column: 0 },
-    childCount: children.length,
-    namedChildCount: children.length,
+    kind: () => props.type,
+    text: () => props.text,
+    range: () => ({
+      start: { line: props.row, column: 0, index: 0 },
+      end: { line: props.row, column: 0, index: 0 },
+    }),
+    children: () => children,
     child: (i: number) => children[i] ?? null,
-    namedChild: (i: number) => children[i] ?? null,
-    childForFieldName: (name: string) => props.fieldMap?.[name] ?? null,
-    descendantsOfType: () => [],
-    parent: null as any,
+    field: (name: string) => props.fieldMap?.[name] ?? null,
+    parent: () => null as any,
+    isNamed: () => true,
+    isLeaf: () => children.length === 0,
   };
   // Set parent reference on children
   for (const c of children) {
-    c.parent = node;
+    c.parent = () => node;
   }
   return node;
 }
@@ -81,7 +82,7 @@ function createMockImportNode(importSource: string, line: number) {
   return importNode;
 }
 
-/** Build a mock tree whose rootNode has the given import nodes as children. */
+/** Build a mock tree (SgRoot) whose root() has the given import nodes as children. */
 function createMockTree(importNodes: any[]) {
   const rootNode = mockNode({
     type: 'program',
@@ -89,7 +90,7 @@ function createMockTree(importNodes: any[]) {
     row: 0,
     children: importNodes,
   });
-  return { rootNode };
+  return { root: () => rootNode };
 }
 
 /** Build a full AnalysisContext with a single file that has mock imports. */
